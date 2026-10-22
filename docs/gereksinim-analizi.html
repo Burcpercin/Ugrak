@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Uğrak — Yazılım Gereksinim Analizi</title>
+<style>
+  @page { size: A4; margin: 20mm 17mm 20mm 17mm; }
+  :root { --ink:#1B1B1B; --muted:#5f584e; --blue:#2F6FDE; --orange:#F28C28; --paper:#FFFBF2; --soft:#FFE6CC; --blueSoft:#DCE8FF; --green:#2E9E4F; --line:#d9d0c1; }
+  * { box-sizing: border-box; }
+  body { font-family: "Inter", "DejaVu Sans", sans-serif; color: var(--ink); font-size: 10.3pt; line-height: 1.5; margin: 0; }
+  h1, h2, h3, h4 { font-family: "Inter Display", "Inter", sans-serif; line-height: 1.25; }
+  h1 { font-size: 21pt; margin: 0 0 6pt; page-break-before: always; padding-bottom: 6pt; border-bottom: 3px solid var(--ink); }
+  h1.nobreak { page-break-before: avoid; }
+  h2 { font-size: 13.5pt; margin: 18pt 0 6pt; page-break-after: avoid; break-after: avoid; }
+  h3, h4 { page-break-after: avoid; break-after: avoid; }
+  @page wide { size: A4 landscape; margin: 14mm 14mm 16mm 14mm; }
+  .landscape { page: wide; page-break-before: always; text-align: center; }
+  .landscape img { width: 100%; max-height: 165mm; }
+  h3 { font-size: 11.3pt; margin: 14pt 0 4pt; }
+  h4 { font-size: 10.5pt; margin: 10pt 0 2pt; }
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 18pt; }
+  li { margin-bottom: 2pt; }
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt; font-size: 9.2pt; page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  th { background: var(--ink); color: #fff; text-align: left; padding: 5pt 6pt; font-weight: 600; }
+  td { border-bottom: 1px solid var(--line); padding: 4.5pt 6pt; vertical-align: top; }
+  tbody tr:nth-child(even) td { background: #faf6ee; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.8pt; background: #f2ece1; padding: 0 3px; }
+  .figure { text-align: center; margin: 10pt 0 14pt; page-break-inside: avoid; }
+  .figure img { max-width: 100%; max-height: 205mm; }
+  .caption { font-size: 9pt; color: var(--muted); margin-top: 4pt; }
+  .tag { display: inline-block; font-size: 8pt; font-weight: 700; padding: 0 5px; border: 1.5px solid var(--ink); margin-right: 3px; white-space: nowrap; }
+  .v1 { background: #D9F2DF; } .tsl { background: #FFF0A8; } .v2 { background: var(--blueSoft); }
+  .must { background: #FBDCD9; } .should { background: var(--soft); } .could { background: #eee; } .wont { background: #fff; color: var(--muted); }
+  .note { border: 2px solid var(--ink); background: #FFF0A8; padding: 7pt 10pt; margin: 8pt 0 12pt; page-break-inside: avoid; }
+  .box { border: 2px solid var(--ink); background: var(--paper); padding: 8pt 11pt; margin: 8pt 0 12pt; page-break-inside: avoid; }
+  .story { border: 2px solid var(--ink); padding: 7pt 10pt 4pt; margin: 0 0 9pt; page-break-inside: avoid; background: #fff; }
+  .story .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8pt; margin-bottom: 3pt; }
+  .story .id { font-weight: 800; font-size: 10.5pt; }
+  .story .text { font-style: italic; margin-bottom: 4pt; }
+  .story ul { margin-bottom: 4pt; font-size: 9.4pt; }
+  .uc { border: 2px solid var(--ink); margin: 0 0 12pt; page-break-inside: avoid; }
+  .uc .t { background: var(--blueSoft); border-bottom: 2px solid var(--ink); padding: 5pt 9pt; font-weight: 800; }
+  .uc table { margin: 0; }
+  .uc td:first-child { width: 26%; font-weight: 600; background: #faf6ee; }
+  .uc ol { margin: 0; padding-left: 15pt; }
+  /* kapak */
+  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .logo { font-family: "Inter Display", sans-serif; font-weight: 900; font-size: 54pt; letter-spacing: 6pt; }
+  .logo span { color: var(--orange); }
+  .cover .title { font-size: 24pt; font-weight: 800; margin-top: 10pt; }
+  .cover .sub { font-size: 13pt; color: var(--muted); }
+  .pixelbar { height: 14px; background: repeating-linear-gradient(90deg, var(--ink) 0 14px, var(--orange) 14px 28px, var(--blue) 28px 42px, var(--ink) 42px 56px); margin: 18pt 0; }
+  .meta td { border: none; padding: 3pt 0; font-size: 10.5pt; background: none !important; }
+  .meta td:first-child { width: 42mm; color: var(--muted); }
+  .toc { columns: 1; }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc li { margin-bottom: 3pt; }
+  .small { font-size: 9pt; color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; }
+</style>
+</head>
+<body>
+
+<!-- ============================ KAPAK ============================ -->
+<section class="cover">
+  <div>
+    <div class="logo">UĞR<span>A</span>K</div>
+    <div class="pixelbar"></div>
+    <div class="title">Yazılım Gereksinim Analizi</div>
+    <div class="sub">İstanbul’daki üniversite öğrencileri için mekan puanlama ve öğrenci kampanyası platformu</div>
+  </div>
+  <div>
+    <table class="meta">
+      <tr><td>Belge sürümü</td><td>1.0 — V1 (ilk sunum)</td></tr>
+      <tr><td>Tarih</td><td>22 Ekim 2026</td></tr>
+      <tr><td>Proje türü</td><td>Ders projesi · 2 kişilik ekip</td></tr>
+      <tr><td>Ekip</td><td>Burç ______________ · ______________</td></tr>
+      <tr><td>Teknoloji</td><td>Expo (React Native) · Supabase (PostgreSQL)</td></tr>
+      <tr><td>Durum</td><td>V1 çalışır durumda (öğrenci uygulaması), mekan ve admin panelleri taslak</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================ İÇİNDEKİLER ============================ -->
+<h1>İçindekiler</h1>
+<ol class="toc">
+  <li><a href="#giris">Giriş</a> — amaç, kapsam, tanımlar</li>
+  <li><a href="#genel">Genel tanım</a> — problem, çözüm, aktörler, kısıtlar, varsayımlar</li>
+  <li><a href="#uc">Use case diyagramları ve senaryolar</a></li>
+  <li><a href="#us">Kullanıcı hikayeleri ve kabul kriterleri</a></li>
+  <li><a href="#fr">İşlevsel gereksinimler</a></li>
+  <li><a href="#nfr">İşlevsel olmayan gereksinimler</a></li>
+  <li><a href="#kvkk">KVKK ve kişisel verilerin korunması</a></li>
+  <li><a href="#veri">Veri modeli ve backend mimarisi</a></li>
+  <li><a href="#risk">Riskler, kısıtlar ve açık konular</a></li>
+  <li><a href="#surum">Sürüm kapsamı (V1 ve sonrası)</a></li>
+  <li><a href="#ek">Ekler — ekran listesi, teknoloji yığını, izlenebilirlik</a></li>
+</ol>
+
+<!-- ============================ 1. GİRİŞ ============================ -->
+<h1 id="giris">1. Giriş</h1>
+
+<h2>1.1 Amaç</h2>
+<p>Bu belge, Uğrak uygulamasının ilk sürümünün (V1) ve sonraki sürümlerde eklenecek özelliklerin gereksinimlerini tanımlar. Belge; ders hocasına sunulmak, ekip içinde ortak bir referans oluşturmak ve geliştirme ile test sürecinde kabul kriterlerini belirlemek amacıyla hazırlanmıştır.</p>
+
+<h2>1.2 Kapsam</h2>
+<p><b>Uğrak</b>, yalnızca İstanbul’daki üniversitelerin aktif öğrencilerinin, üniversitenin verdiği <code>.edu.tr</code> e-posta adresiyle kayıt olabildiği bir platformdur. Öğrenciler kampüs çevresindeki kafe, restoran ve çalışma mekanlarını öğrenciye özel dört kriterle (fiyat, ders çalışmaya uygunluk, porsiyon, ortam) puanlar; mekanlar ise yalnızca doğrulanmış öğrencilerin kullanabildiği tek kullanımlık kampanya kodları sunar.</p>
+<p>Uygulama tek kod tabanıyla web, Android ve iOS’ta çalışacak şekilde geliştirilmektedir. <b>V1 web uygulaması olarak sunulur.</b></p>
+<div class="box">
+  <b>V1’de çalışır durumda olanlar:</b> okul e-postasıyla kayıt ve giriş, doğrulama maili, yıllık yeniden doğrulama, KVKK onayı, basit pixel avatar, mekan listesi ve detayı, 4 kriterli puan ve yorum, favoriler, kampanya kodu (QR + 6 hane), PostgreSQL veritabanı, güvenlik kuralları (RLS).<br>
+  <b>V1’de taslak (örnek veri) olanlar:</b> mekan paneli, admin paneli.<br>
+  <b>Sonraki sürümler:</b> harita, forum, bildirimler, misafir ve mezun rolleri, mekan verisinin dış kaynaktan çekilmesi.
+</div>
+
+<h2>1.3 Tanımlar ve kısaltmalar</h2>
+<table>
+  <thead><tr><th style="width:28%">Terim</th><th>Açıklama</th></tr></thead>
+  <tbody>
+    <tr><td>Doğrulanmış öğrenci</td><td>Okul e-posta adresine gönderilen linke tıklamış ve son doğrulamasının üzerinden 365 gün geçmemiş kullanıcı.</td></tr>
+    <tr><td>Yıllık yeniden doğrulama</td><td>Doğrulama süresi dolan kullanıcının, okul adresine gelen 6 haneli kodla öğrenciliğini yenilemesi.</td></tr>
+    <tr><td>Kampanya kodu</td><td>Öğrencinin bir kampanya için aldığı, 10 dakika geçerli, tek kullanımlık 6 karakterli kod ve QR karşılığı.</td></tr>
+    <tr><td>Kriter puanı</td><td>Fiyat/performans, ders çalışmaya uygunluk (priz, wifi, sessizlik), porsiyon ve ortam için 1–5 arası puan.</td></tr>
+    <tr><td>Mekan sahibi</td><td>Uğrak ekibiyle anlaşıp hesabı ekip tarafından açılan, kendi mekanının kampanyalarını yöneten kullanıcı.</td></tr>
+    <tr><td>Admin</td><td>Uğrak ekibi; mekan başvurularını, mekan hesaplarını ve üniversite alan adı listesini yönetir.</td></tr>
+    <tr><td>RLS</td><td>Row Level Security — PostgreSQL’in satır düzeyinde erişim kuralları. Kullanıcının hangi satırı okuyup yazabileceğini veritabanı belirler.</td></tr>
+    <tr><td>OTP</td><td>One-Time Password — tek kullanımlık doğrulama kodu.</td></tr>
+    <tr><td>KVKK</td><td>6698 sayılı Kişisel Verilerin Korunması Kanunu.</td></tr>
+    <tr><td>MoSCoW</td><td>Önceliklendirme: Must (olmazsa olmaz), Should (olmalı), Could (olabilir), Won’t (bu sürümde yok).</td></tr>
+    <tr><td>Demo modu</td><td>Supabase bağlantısı tanımlı değilken uygulamanın veriyi tarayıcıda tuttuğu ve doğrulama maillerini uygulama içinde gösterdiği sunum modu.</td></tr>
+  </tbody>
+</table>
+
+<h2>1.4 Referanslar</h2>
+<ul>
+  <li>6698 sayılı Kişisel Verilerin Korunması Kanunu ve Aydınlatma Yükümlülüğünün Yerine Getirilmesinde Uyulacak Usul ve Esaslar Hakkında Tebliğ</li>
+  <li>Supabase dokümantasyonu — Auth, Row Level Security, Database Functions</li>
+  <li>Expo / Expo Router dokümantasyonu (SDK 58)</li>
+  <li>Proje kaynak kodu: <code>supabase/schema.sql</code>, <code>src/</code></li>
+</ul>
+
+<!-- ============================ 2. GENEL TANIM ============================ -->
+<h1 id="genel">2. Genel tanım</h1>
+
+<h2>2.1 Problem</h2>
+<ul>
+  <li>Genel puanlama uygulamalarındaki puanlar öğrencinin ihtiyacını yansıtmaz: “Ders çalışılır mı, priz var mı, öğrenci bütçesine uygun mu?” sorularının cevabı tek bir yıldız puanında kaybolur.</li>
+  <li>Yorumların kim tarafından yazıldığı belirsizdir; sahte ve reklam amaçlı yorumlar güveni düşürür.</li>
+  <li>Kampüs çevresindeki mekanların öğrencilere ulaşabileceği, öğrenciye özel ve suistimal edilemeyen bir kampanya kanalı yoktur. “Öğrenci indirimi” çoğu zaman kimlik kartına bakılarak elle uygulanır.</li>
+</ul>
+
+<h2>2.2 Çözüm ve ürün perspektifi</h2>
+<p>Uğrak, kaydı yalnızca okul e-posta adresiyle mümkün kılarak her yorumun gerçek bir öğrenciden geldiğini garanti eder. Puanlama öğrenciye özel dört kritere ayrılır. Mekanlar, doğrulanmış öğrencilere tek kullanımlık ve kısa süreli kodlarla kampanya sunar. Platform; öğrenci uygulaması (web + mobil), mekan paneli (web) ve yönetim panelinden oluşur ve tek bir Supabase (PostgreSQL) backend’i paylaşır.</p>
+
+<h2>2.3 Aktörler ve kullanıcı sınıfları</h2>
+<table>
+  <thead><tr><th style="width:20%">Aktör</th><th>Tanım ve yetkiler</th><th style="width:16%">Sürüm</th></tr></thead>
+  <tbody>
+    <tr><td><b>Öğrenci</b></td><td>İstanbul’daki bir üniversitenin okul e-postasıyla kayıt olmuş ve doğrulanmış kullanıcı. Mekanları görür, puan ve yorum yazar, favori ekler, kampanya kodu alır.</td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td><b>Doğrulaması dolmuş kullanıcı</b></td><td>Son doğrulamasının üzerinden 365 gün geçmiş öğrenci. Yeniden doğrulayana kadar puan veremez ve kampanya kodu alamaz; yeniden doğrulama ekranına yönlendirilir.</td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td><b>Mekan sahibi</b></td><td>Uğrak ekibiyle iletişime geçip anlaşan mekanın yetkilisi. Hesabı ekip açar. Kendi mekanının kampanyalarını yönetir, öğrenci kodlarını doğrular, istatistikleri görür.</td><td><span class="tag tsl">V1 taslak</span> <span class="tag v2">V2 canlı</span></td></tr>
+    <tr><td><b>Admin</b></td><td>Uğrak ekibi. Mekan başvurularını ve hesaplarını, üniversite alan adı listesini ve şikayetleri yönetir.</td><td><span class="tag tsl">V1 taslak</span> <span class="tag v2">V2 canlı</span></td></tr>
+    <tr><td><b>E-posta servisi</b> (sistem)</td><td>Supabase Auth. Doğrulama linkini ve yıllık doğrulama kodunu öğrencinin okul adresine gönderir.</td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td><b>Misafir</b></td><td>Okul e-postası olmayan kullanıcı. Mekanları görüntüleyebilir; puan, kampanya ve forum kapalıdır. <i>Kararı sonraki sürüme ertelendi.</i></td><td><span class="tag wont">Sonraki</span></td></tr>
+    <tr><td><b>Mezun</b></td><td>Okul e-postası mezuniyet sonrası kapanabildiği için ayrı bir doğrulama yöntemi gerektirir. <i>Kararı sonraki sürüme ertelendi.</i> V1’de yeniden doğrulaması tutmayan hesap görüntüleme modunda kalır.</td><td><span class="tag wont">Sonraki</span></td></tr>
+  </tbody>
+</table>
+
+<h2>2.4 Çalışma ortamı</h2>
+<ul>
+  <li><b>İstemci:</b> Güncel Chrome, Safari, Firefox, Edge (masaüstü ve mobil tarayıcı). Aynı kod Expo Go / derlenmiş uygulama ile Android 10+ ve iOS 16+ cihazlarda çalışır.</li>
+  <li><b>Sunucu:</b> Supabase (yönetilen PostgreSQL, Auth, REST API). Uygulamaya özel ayrı bir sunucu yoktur; iş kuralları veritabanı fonksiyonları, tetikleyiciler ve RLS ile uygulanır.</li>
+  <li><b>Barındırma:</b> Web derlemesi statik dosya olarak herhangi bir statik barındırıcıda (Netlify, Vercel vb.) yayınlanabilir.</li>
+</ul>
+
+<h2>2.5 Tasarım ve uygulama kısıtları</h2>
+<ul>
+  <li>Kayıt yalnızca <code>.edu.tr</code> uzantılı ve sistemdeki İstanbul üniversiteleri listesinde yer alan alan adlarıyla yapılabilir.</li>
+  <li>Uygulama arayüzü Türkçedir; tarih ve saatler Türkiye saatine göre gösterilir.</li>
+  <li>Öğrenci tarafı mobil öncelikli tasarlanır (480 px genişlik hedefi); paneller masaüstü öncelikli tasarlanır.</li>
+  <li>Görsel kimlik: retro-pixel tarz. Avatar ve arayüz özgün çizimdir; başka oyunların çizimleri kullanılmaz (telif).</li>
+  <li>Backend olarak Supabase / PostgreSQL kullanılır; ders kapsamında başka bir backend zorunluluğu yoktur.</li>
+  <li>Mekan verisi ekip tarafından elle girilmez; V1’de örnek veri kullanılır, ileride mekan başvuruları ve dış kaynak (ör. Google Places) üzerinden gelir.</li>
+</ul>
+
+<h2>2.6 Varsayımlar ve bağımlılıklar</h2>
+<ul>
+  <li>Her öğrencinin üniversitesi tarafından verilmiş, erişebildiği bir e-posta adresi vardır.</li>
+  <li>Okul e-posta adresine erişebilmek, o adresin sahibinin aktif öğrenci olduğu anlamına gelir. (Personel istisnası için bkz. Bölüm 9.)</li>
+  <li>Supabase’in e-posta gönderim servisi (veya bağlanacak SMTP servisi) okul mail sunucularına teslimat yapabilir.</li>
+  <li>Mekan sahipleri kampanya kodunu kasada kontrol etmeyi ve öğrenci kimlik kartına bakmayı kabul eder.</li>
+</ul>
+
+<!-- ============================ 3. USE CASE ============================ -->
+<h1 id="uc">3. Use case diyagramları ve senaryolar</h1>
+<p>Bu bölümde sistemin aktörlerle etkileşimi dört diyagramla gösterilmiş, ardından kritik use case’ler senaryo tablolarıyla ayrıntılandırılmıştır. Use case’lerin tamamının listesi Bölüm 3.5’tedir.</p>
+
+<div class="figure"><img src="diagrams/uc1_genel.svg" style="max-height:125mm"><div class="caption">Şekil 1 — Sistem bağlamı: aktörler ve ana işlev grupları</div></div>
+
+<div class="figure"><img src="diagrams/uc2_hesap.svg"><div class="caption">Şekil 2 — Hesap, doğrulama ve profil use case’leri</div></div>
+
+<div class="figure"><img src="diagrams/uc3_mekan.svg"><div class="caption">Şekil 3 — Mekan keşfi, puanlama ve kampanya use case’leri</div></div>
+
+<div class="figure"><img src="diagrams/uc4_panel.svg"><div class="caption">Şekil 4 — Mekan paneli ve yönetim paneli use case’leri (V1’de taslak ekran)</div></div>
+
+<div class="landscape"><img src="diagrams/akis_dogrulama.svg"><div class="caption">Şekil 5 — Kayıt ve yıllık doğrulama akışı (etkinlik diyagramı)</div></div>
+<div style="page-break-before:always"></div>
+
+<h2>3.1 UC-01 Kayıt ol</h2>
+<div class="uc"><div class="t">UC-01 · Kayıt ol</div><table>
+  <tr><td>Aktör</td><td>Öğrenci (birincil), E-posta servisi (ikincil)</td></tr>
+  <tr><td>Ön koşul</td><td>Kullanıcının oturumu yok; üniversitesinin verdiği e-posta adresine erişimi var.</td></tr>
+  <tr><td>Ana akış</td><td><ol>
+    <li>Öğrenci “Kayıt ol” ekranını açar.</li>
+    <li>Takma ad, okul e-postası, şifre ve şifre tekrarını girer.</li>
+    <li>Sistem e-posta adresini yazarken kontrol eder ve eşleşen üniversiteyi ve kampüsü gösterir.</li>
+    <li>Öğrenci “aktif öğrenciyim” beyanını ve KVKK aydınlatma metni onayını işaretler.</li>
+    <li>“Kayıt ol”a basar. Sistem alan adını veritabanında tekrar kontrol eder, hesabı ve profili oluşturur.</li>
+    <li>E-posta servisi okul adresine doğrulama linki gönderir; öğrenci “Mailini kontrol et” ekranına yönlendirilir.</li>
+  </ol></td></tr>
+  <tr><td>Alternatif akışlar</td><td>
+    3a. Adres <code>.edu.tr</code> ile bitmiyor → “Sadece üniversitenin verdiği .edu.tr adresiyle kayıt olunabilir.”<br>
+    3b. Alan adı listedeki İstanbul üniversitelerinden birine ait değil → “Uğrak şimdilik sadece İstanbul’da.”<br>
+    4a. Beyan veya KVKK onayı eksik → ilgili alan altında hata gösterilir.<br>
+    5a. Şifre 8 karakterden kısa veya tekrar eşleşmiyor → alan hatası.<br>
+    5b. Adres zaten kayıtlı → “Bu e-posta ile zaten bir hesap var.”<br>
+    5c. İstek doğrudan API’ye gönderilse bile veritabanı tetikleyicisi geçersiz alan adını reddeder.
+  </td></tr>
+  <tr><td>Son koşul</td><td>Doğrulanmamış bir hesap ve profil oluşur (<code>verified_at</code> boş); KVKK onay zamanı kaydedilir.</td></tr>
+</table></div>
+
+<h2>3.2 UC-02 E-posta adresini doğrula · UC-04 Yıllık yeniden doğrula</h2>
+<div class="uc"><div class="t">UC-02 · E-posta adresini doğrula</div><table>
+  <tr><td>Aktör</td><td>Öğrenci, E-posta servisi</td></tr>
+  <tr><td>Ön koşul</td><td>UC-01 tamamlanmış, doğrulama maili gönderilmiş.</td></tr>
+  <tr><td>Ana akış</td><td><ol>
+    <li>Öğrenci okul mail kutusunu açar ve “Uğrak — Öğrenci adresini doğrula” mailindeki linke tıklar.</li>
+    <li>Sistem e-posta onay zamanını kaydeder, profildeki <code>verified_at</code> alanını doldurur ve oturumu açar.</li>
+    <li>İlk girişte öğrenci avatar oluşturucuya (UC-06), ardından Keşfet ekranına yönlendirilir.</li>
+  </ol></td></tr>
+  <tr><td>Alternatif akışlar</td><td>1a. Mail gelmedi → “Maili tekrar gönder” (60 saniye bekleme süresiyle).<br>1b. Öğrenci doğrulamadan giriş yapmaya çalışır → “E-posta adresin henüz doğrulanmamış” uyarısı ve doğrulama ekranına geçiş.</td></tr>
+  <tr><td>Son koşul</td><td>Kullanıcı 365 gün boyunca doğrulanmış öğrencidir.</td></tr>
+</table></div>
+
+<div class="uc"><div class="t">UC-04 · Yıllık yeniden doğrula</div><table>
+  <tr><td>Aktör</td><td>Doğrulaması dolmuş kullanıcı, E-posta servisi</td></tr>
+  <tr><td>Ön koşul</td><td>Kullanıcının oturumu açık; son doğrulamasının üzerinden 365 gün geçmiş.</td></tr>
+  <tr><td>Ana akış</td><td><ol>
+    <li>Uygulama açılışta doğrulama süresini kontrol eder ve kullanıcıyı “Yıllık doğrulama” ekranına yönlendirir.</li>
+    <li>Kullanıcı “Kod gönder”e basar; okul adresine 6 haneli kod gönderilir.</li>
+    <li>Kullanıcı kodu girer. Sistem kodu doğrular ve <code>refresh_verification()</code> fonksiyonuyla doğrulama tarihini yeniler.</li>
+    <li>Kullanıcı uygulamaya döner.</li>
+  </ol></td></tr>
+  <tr><td>Alternatif akışlar</td><td>3a. Kod hatalı veya süresi dolmuş → “Kod hatalı ya da süresi dolmuş.” · 3b. Kullanıcı okul mailine erişemiyor (mezuniyet vb.) → hesap görüntüleme modunda kalır; puan verme ve kampanya kodu kapalıdır.</td></tr>
+  <tr><td>Son koşul</td><td><code>verified_at</code> güncellenir, yeni 365 günlük süre başlar.</td></tr>
+</table></div>
+
+<h2>3.3 UC-09 Puan ver ve yorum yaz</h2>
+<div class="uc"><div class="t">UC-09 · 4 kriterle puan ver ve yorum yaz</div><table>
+  <tr><td>Aktör</td><td>Doğrulanmış öğrenci</td></tr>
+  <tr><td>Ön koşul</td><td>Oturum açık ve doğrulama süresi geçerli; öğrenci bir mekanın detay sayfasında.</td></tr>
+  <tr><td>Ana akış</td><td><ol>
+    <li>Öğrenci “Puan ver” kartında dört kriterin her birine 1–5 arası puan seçer.</li>
+    <li>İsteğe bağlı en fazla 500 karakterlik yorum yazar ve “Gönder”e basar.</li>
+    <li>Sistem doğrulama süresini kontrol eder, yorumu kaydeder; mekanın kriter ortalamaları ve yorum sayısı güncellenir.</li>
+    <li>Yorum, takma ad, avatar ve üniversite kısaltmasıyla yorum listesinde görünür.</li>
+  </ol></td></tr>
+  <tr><td>Alternatif akışlar</td><td>1a. Bir kriter boş bırakılmış → “Dört kriterin hepsine puan ver.” · 3a. Öğrencinin bu mekana yorumu zaten var → mevcut yorum güncellenir (UC-10). · 3b. Doğrulama süresi dolmuş → işlem veritabanında RLS tarafından reddedilir ve kullanıcı bilgilendirilir.</td></tr>
+  <tr><td>Son koşul</td><td>Kullanıcı başına mekan başına tek yorum bulunur (<code>UNIQUE(user_id, venue_id)</code>).</td></tr>
+</table></div>
+
+<h2>3.4 UC-12 Kampanya kodu al · UC-15 Öğrenci kodunu doğrula</h2>
+<div class="uc"><div class="t">UC-12 · Kampanya kodu al</div><table>
+  <tr><td>Aktör</td><td>Doğrulanmış öğrenci</td></tr>
+  <tr><td>Ön koşul</td><td>Kampanya aktif ve tarih aralığında; öğrencinin doğrulaması geçerli.</td></tr>
+  <tr><td>Ana akış</td><td><ol>
+    <li>Öğrenci mekan detayında veya Kampanyalar sekmesinde “Kodu al”a basar.</li>
+    <li>Sistem <code>create_redemption()</code> ile 6 karakterli, benzersiz, 10 dakika geçerli bir kod üretir.</li>
+    <li>Ekranda QR, kod ve geri sayım gösterilir. Öğrenci kasada kodu öğrenci kimlik kartıyla birlikte gösterir.</li>
+  </ol></td></tr>
+  <tr><td>Alternatif akışlar</td><td>2a. Aynı kampanya için süresi dolmamış, kullanılmamış kod varsa yeni kod üretilmez, mevcut kod gösterilir. · 2b. Kampanya bitmiş → “Kampanya aktif değil.” · 3a. Süre dolar → kod “Süresi doldu” olarak gösterilir, öğrenci yeniden kod alabilir.</td></tr>
+  <tr><td>Son koşul</td><td><code>redemptions</code> tablosunda kullanılmamış bir kod kaydı oluşur.</td></tr>
+</table></div>
+
+<div class="uc"><div class="t">UC-15 · Öğrenci kodunu doğrula (mekan paneli — V1 taslak, V2 canlı)</div><table>
+  <tr><td>Aktör</td><td>Mekan sahibi</td></tr>
+  <tr><td>Ön koşul</td><td>Mekan sahibi panele giriş yapmış; öğrenci kodunu göstermiş.</td></tr>
+  <tr><td>Ana akış</td><td><ol>
+    <li>Mekan sahibi kodu panele girer (V2: kamerayla QR okutur).</li>
+    <li>Sistem <code>redeem_code()</code> ile kodun bu mekana ait, süresi dolmamış ve kullanılmamış olduğunu kontrol eder.</li>
+    <li>Kod “kullanıldı” olarak işaretlenir; panelde kampanya adıyla birlikte “Geçerli” sonucu gösterilir.</li>
+  </ol></td></tr>
+  <tr><td>Alternatif akışlar</td><td>2a. Kod başka mekana ait / bulunamadı · 2b. Kod daha önce kullanılmış · 2c. Süresi dolmuş → ilgili hata gösterilir.</td></tr>
+  <tr><td>Son koşul</td><td>Kod bir daha kullanılamaz. Mekan, öğrencinin kimliğini görmez.</td></tr>
+</table></div>
+
+<h2>3.5 Use case listesi</h2>
+<table>
+  <thead><tr><th style="width:9%">No</th><th>Use case</th><th style="width:17%">Aktör</th><th style="width:11%">Öncelik</th><th style="width:15%">Sürüm</th></tr></thead>
+  <tbody>
+    <tr><td>UC-01</td><td>Kayıt ol (edu + İstanbul kontrolü, KVKK onayı)</td><td>Öğrenci</td><td><span class="tag must">Must</span></td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td>UC-02</td><td>E-posta adresini doğrula</td><td>Öğrenci, E-posta</td><td><span class="tag must">Must</span></td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td>UC-03</td><td>Giriş yap</td><td>Öğrenci</td><td><span class="tag must">Must</span></td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td>UC-04</td><td>Yıllık yeniden doğrula</td><td>Öğrenci, E-posta</td><td><span class="tag must">Must</span></td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td>UC-05</td><td>Çıkış yap</td><td>Öğrenci</td><td><span class="tag must">Must</span></td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td>UC-06</td><td>Pixel avatar oluştur / düzenle</td><td>Öğrenci</td><td><span class="tag should">Should</span></td><td><span class="tag v1">V1 (basit)</span></td></tr>
+    <tr><td>UC-07</td><td>Mekanları listele, filtrele, sırala</td><td>Öğrenci</td><td><span class="tag must">Must</span></td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td>UC-08</td><td>Mekan detayını görüntüle</td><td>Öğrenci</td><td><span class="tag must">Must</span></td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td>UC-09</td><td>4 kriterle puan ver ve yorum yaz</td><td>Öğrenci</td><td><span class="tag must">Must</span></td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td>UC-10</td><td>Yorumunu düzenle / sil</td><td>Öğrenci</td><td><span class="tag should">Should</span></td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td>UC-11</td><td>Favorilere ekle / çıkar</td><td>Öğrenci</td><td><span class="tag could">Could</span></td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td>UC-12</td><td>Kampanya kodu al</td><td>Öğrenci</td><td><span class="tag must">Must</span></td><td><span class="tag v1">V1</span></td></tr>
+    <tr><td>UC-13</td><td>Uğrak ekibiyle iletişime geç (mekan katılımı)</td><td>Mekan sahibi</td><td><span class="tag should">Should</span></td><td><span class="tag tsl">V1 taslak</span></td></tr>
+    <tr><td>UC-14</td><td>Kampanya oluştur / durdur</td><td>Mekan sahibi</td><td><span class="tag must">Must</span></td><td><span class="tag tsl">V1 taslak</span> <span class="tag v2">V2</span></td></tr>
+    <tr><td>UC-15</td><td>Öğrenci kodunu doğrula</td><td>Mekan sahibi</td><td><span class="tag must">Must</span></td><td><span class="tag tsl">V1 taslak</span> <span class="tag v2">V2</span></td></tr>
+    <tr><td>UC-16</td><td>İstatistik ve yorumları görüntüle</td><td>Mekan sahibi</td><td><span class="tag could">Could</span></td><td><span class="tag tsl">V1 taslak</span></td></tr>
+    <tr><td>UC-17</td><td>Mekan başvurularını yönet</td><td>Admin</td><td><span class="tag should">Should</span></td><td><span class="tag tsl">V1 taslak</span></td></tr>
+    <tr><td>UC-18</td><td>Mekan hesabı oluştur</td><td>Admin</td><td><span class="tag must">Must</span></td><td><span class="tag tsl">V1 taslak</span> <span class="tag v2">V2</span></td></tr>
+    <tr><td>UC-19</td><td>Üniversite alan adlarını yönet</td><td>Admin</td><td><span class="tag should">Should</span></td><td><span class="tag tsl">V1 taslak</span></td></tr>
+    <tr><td>UC-20</td><td>Şikayetleri incele, yorum gizle</td><td>Admin</td><td><span class="tag should">Should</span></td><td><span class="tag v2">V2</span></td></tr>
+  </tbody>
+</table>
+
+<!-- ============================ 4. KULLANICI HİKAYELERİ ============================ -->
+<h1 id="us">4. Kullanıcı hikayeleri ve kabul kriterleri</h1>
+<p>Hikayeler “<i>…olarak, …istiyorum, böylece…</i>” kalıbıyla yazılmış ve sekiz epik altında toplanmıştır. Her hikayenin kabul kriterleri V1 testlerinde kontrol listesi olarak kullanılır. Etiketler: öncelik (MoSCoW) ve sürüm.</p>
+
+<h2>E1 · Hesap ve öğrenci doğrulaması</h2>
+<div class="story"><div class="head"><span class="id">US-01 · Okul e-postasıyla kayıt</span><span><span class="tag must">Must</span><span class="tag v1">V1</span><span class="small">UC-01</span></span></div>
+<div class="text">Bir üniversite öğrencisi olarak okulumun verdiği e-posta adresiyle kayıt olmak istiyorum, böylece yalnızca gerçek öğrencilerin bulunduğu bir topluluğa katılırım.</div>
+<ul><li><code>.edu.tr</code> ile bitmeyen adreslerde kayıt reddedilir ve nedeni yazılır.</li><li>Listede olmayan (İstanbul dışı) üniversite adreslerinde “şimdilik sadece İstanbul” mesajı gösterilir.</li><li>Geçerli adres yazıldığında üniversite adı ve kampüsü anında gösterilir.</li><li>Şifre en az 8 karakterdir ve tekrarıyla eşleşmelidir.</li><li>Öğrencilik beyanı ve KVKK onayı işaretlenmeden kayıt tamamlanmaz.</li><li>Aynı e-postayla ikinci hesap açılamaz.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-02 · Doğrulama maili</span><span><span class="tag must">Must</span><span class="tag v1">V1</span><span class="small">UC-02</span></span></div>
+<div class="text">Yeni kayıt olan öğrenci olarak okul adresime doğrulama linki gelmesini istiyorum, böylece adresin bana ait olduğunu ve öğrenci olduğumu kanıtlarım.</div>
+<ul><li>Kayıttan hemen sonra okul adresine doğrulama maili gider ve “Mailini kontrol et” ekranı açılır.</li><li>Linke tıklanınca hesap doğrulanır, oturum açılır ve doğrulama tarihi kaydedilir.</li><li>Mail tekrar gönderilebilir; iki gönderim arasında 60 saniye beklenir.</li><li>Doğrulanmamış hesapla giriş denenirse kullanıcı uyarılır ve doğrulama ekranına yönlendirilir.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-03 · Giriş</span><span><span class="tag must">Must</span><span class="tag v1">V1</span><span class="small">UC-03</span></span></div>
+<div class="text">Kayıtlı öğrenci olarak okul e-postam ve şifremle giriş yapmak istiyorum, böylece puanlarıma ve kampanyalara her cihazdan ulaşırım.</div>
+<ul><li>Hatalı bilgide “E-posta ya da şifre hatalı” mesajı gösterilir; hangi alanın yanlış olduğu belirtilmez.</li><li>Oturum cihazda saklanır; uygulama yeniden açıldığında tekrar giriş istenmez.</li><li>Girişten sonra kullanıcı durumuna göre yönlendirilir: avatar yoksa avatar ekranı, doğrulama dolmuşsa yıllık doğrulama, aksi hâlde Keşfet.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-04 · Yıllık yeniden doğrulama</span><span><span class="tag must">Must</span><span class="tag v1">V1</span><span class="small">UC-04</span></span></div>
+<div class="text">Platform olarak öğrenciliğin her yıl yeniden doğrulanmasını istiyoruz, böylece mezun olan ya da okulu bırakan kişiler öğrenci ayrıcalıklarını kullanmaya devam edemez.</div>
+<ul><li>Son doğrulamanın üzerinden 365 gün geçince kullanıcı yıllık doğrulama ekranına yönlendirilir.</li><li>Okul adresine 6 haneli kod gönderilir; doğru kod girildiğinde doğrulama tarihi yenilenir.</li><li>Hatalı veya süresi dolmuş kodda hata gösterilir.</li><li>Doğrulaması dolmuş kullanıcı puan veremez ve kampanya kodu alamaz; bu kural veritabanında da (RLS ve fonksiyon) uygulanır.</li><li>Profil sayfasında doğrulamanın bitiş tarihi ve kalan gün sayısı görünür.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-05 · Çıkış</span><span><span class="tag must">Must</span><span class="tag v1">V1</span><span class="small">UC-05</span></span></div>
+<div class="text">Öğrenci olarak hesabımdan çıkış yapabilmek istiyorum, böylece ortak kullanılan bir cihazda hesabım açık kalmaz.</div>
+<ul><li>Çıkıştan sonra oturum silinir ve giriş ekranı açılır.</li></ul></div>
+
+<h2>E2 · Profil ve avatar</h2>
+<div class="story"><div class="head"><span class="id">US-06 · Pixel avatar</span><span><span class="tag should">Should</span><span class="tag v1">V1 (basit)</span><span class="small">UC-06</span></span></div>
+<div class="text">Öğrenci olarak kendime pixel tarzda bir karakter oluşturmak istiyorum, böylece gerçek fotoğrafımı paylaşmadan yorumlarda kendimi ifade ederim.</div>
+<ul><li>İlk girişte avatar oluşturma ekranı açılır; avatar kaydedilmeden uygulamaya geçilmez.</li><li>Saç modeli (3), saç rengi (5), ten rengi (4), tişört rengi (6) ve gözlük seçilebilir; önizleme anında güncellenir.</li><li>“Rastgele” butonu rastgele bir karakter oluşturur.</li><li>Avatar ve takma ad profil sayfasından sonradan değiştirilebilir.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-07 · Profil sayfası</span><span><span class="tag should">Should</span><span class="tag v1">V1</span></span></div>
+<div class="text">Öğrenci olarak profilimde bilgilerimi, favorilerimi ve yorumlarımı görmek istiyorum, böylece hesabımı tek yerden yönetirim.</div>
+<ul><li>Takma ad, okul e-postası, üniversite, “Doğrulanmış öğrenci” rozeti ve doğrulama bitiş tarihi gösterilir.</li><li>Favori mekanlar ve yazılan yorumlar listelenir; tıklanınca ilgili mekan açılır.</li></ul></div>
+
+<h2>E3 · Mekan keşfi</h2>
+<div class="story"><div class="head"><span class="id">US-08 · Kampüsüme yakın mekanlar</span><span><span class="tag must">Must</span><span class="tag v1">V1</span><span class="small">UC-07</span></span></div>
+<div class="text">Öğrenci olarak kampüsümün çevresindeki mekanları görmek istiyorum, böylece ders arasında nereye gideceğime hızlıca karar veririm.</div>
+<ul><li>Liste varsayılan olarak öğrencinin kendi kampüsüne göre açılır; “Tüm İstanbul” ve diğer kampüslere geçilebilir.</li><li>Her kartta genel puan, dört kriter çubuğu, yorum sayısı, kategori, semt, fiyat seviyesi ve kampüse mesafe görünür.</li><li>Aktif kampanyası olan mekanlarda kampanya rozeti görünür; öne çıkan kampanya listenin üstünde gösterilir.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-09 · Arama, filtre ve sıralama</span><span><span class="tag should">Should</span><span class="tag v1">V1</span><span class="small">UC-07</span></span></div>
+<div class="text">Öğrenci olarak mekanları ada, semte ve kategoriye göre arayıp puana, yakınlığa veya fiyata göre sıralamak istiyorum, böylece ihtiyacıma uygun yeri bulurum.</div>
+<ul><li>Arama mekan adında ve semtte Türkçe karakter duyarlı çalışır.</li><li>Kategori filtresi (kafe, restoran, fast food, tatlıcı, çalışma kafe) tek dokunuşla açılıp kapanır.</li><li>Sonuç yoksa “Burada henüz mekan yok” mesajı ve filtreleri temizleme seçeneği çıkar.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-10 · Mekan detayı</span><span><span class="tag must">Must</span><span class="tag v1">V1</span><span class="small">UC-08</span></span></div>
+<div class="text">Öğrenci olarak bir mekanın öğrenci puanlarını, kampanyalarını ve yorumlarını tek sayfada görmek istiyorum, böylece gitmeden önce fikir sahibi olurum.</div>
+<ul><li>Mekan bilgisi, kampüse mesafe ve tahmini yürüyüş süresi, genel puan ve dört kriter ortalaması gösterilir.</li><li>Aktif kampanyalar, puan verme formu ve en yeni yorumlar aynı sayfada yer alır.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-11 · Favoriler</span><span><span class="tag could">Could</span><span class="tag v1">V1</span><span class="small">UC-11</span></span></div>
+<div class="text">Öğrenci olarak sevdiğim mekanları favorilere eklemek istiyorum, böylece onlara hızlıca dönerim (ve ileride kampanyalarından haberdar olurum).</div>
+<ul><li>Kalp ikonu listede ve detayda favori ekler/çıkarır; durum anında değişir.</li><li>Favoriler profil sayfasında listelenir.</li></ul></div>
+
+<h2>E4 · Puanlama ve yorum</h2>
+<div class="story"><div class="head"><span class="id">US-12 · Dört kriterli puan</span><span><span class="tag must">Must</span><span class="tag v1">V1</span><span class="small">UC-09</span></span></div>
+<div class="text">Doğrulanmış öğrenci olarak bir mekanı fiyat, ders çalışmaya uygunluk, porsiyon ve ortam açısından ayrı ayrı puanlamak istiyorum, böylece diğer öğrenciler benim önemsediğim kriterlere göre karar verebilir.</div>
+<ul><li>Dört kriterin her biri 1–5 arasında zorunludur; yorum isteğe bağlıdır ve en fazla 500 karakterdir.</li><li>Gönderildiğinde mekanın kriter ortalamaları ve yorum sayısı güncellenir.</li><li>Her öğrenci bir mekana yalnızca bir kez puan verebilir.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-13 · Yorumu düzenleme ve silme</span><span><span class="tag should">Should</span><span class="tag v1">V1</span><span class="small">UC-10</span></span></div>
+<div class="text">Öğrenci olarak verdiğim puanı sonradan güncellemek veya silmek istiyorum, böylece mekan değiştiğinde görüşüm de güncel kalır.</div>
+<ul><li>Daha önce puan verilmiş mekanda form mevcut puanlarla dolu gelir; “Güncelle” ve “Sil” seçenekleri görünür.</li><li>Kullanıcı yalnızca kendi yorumunu düzenleyip silebilir (RLS).</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-14 · Yorumlarda gizlilik</span><span><span class="tag must">Must</span><span class="tag v1">V1</span></span></div>
+<div class="text">Öğrenci olarak yorumlarımda gerçek kimliğimin ve e-postamın görünmemesini istiyorum, böylece rahatça yorum yaparım.</div>
+<ul><li>Yorumlarda yalnızca takma ad, avatar, “ÖĞRENCİ” rozeti ve üniversite kısaltması görünür.</li><li>E-posta adresi hiçbir kullanıcıya ve mekana gösterilmez.</li></ul></div>
+
+<h2>E5 · Öğrenci kampanyaları</h2>
+<div class="story"><div class="head"><span class="id">US-15 · Kampanyaları görme</span><span><span class="tag must">Must</span><span class="tag v1">V1</span></span></div>
+<div class="text">Öğrenci olarak aktif öğrenci kampanyalarını tek bir yerde görmek istiyorum, böylece bütçeme uygun fırsatları kaçırmam.</div>
+<ul><li>Kampanyalar sekmesi tüm aktif kampanyaları kampüse yakınlığa göre sıralar.</li><li>Her kampanyada indirim, başlık, açıklama, mekan, mesafe ve son gün gösterilir.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-16 · Kampanya kodu alma</span><span><span class="tag must">Must</span><span class="tag v1">V1</span><span class="small">UC-12</span></span></div>
+<div class="text">Doğrulanmış öğrenci olarak bir kampanya için kod almak istiyorum, böylece kasada öğrenci indirimini kolayca kullanırım.</div>
+<ul><li>“Kodu al” ile QR ve 6 karakterli kod gösterilir; kod 10 dakika geçerlidir ve geri sayım görünür.</li><li>Aynı kampanya için geçerli bir kod varsa yeni kod üretilmez, mevcut kod gösterilir.</li><li>Kod tek kullanımlıktır; süresi dolunca “Süresi doldu” görünür.</li><li>Doğrulaması dolmuş kullanıcı kod alamaz.</li></ul></div>
+
+<h2>E6 · Mekan paneli (V1 taslak)</h2>
+<div class="story"><div class="head"><span class="id">US-17 · Platforma katılım</span><span><span class="tag should">Should</span><span class="tag tsl">V1 taslak</span><span class="small">UC-13, UC-18</span></span></div>
+<div class="text">Mekan sahibi olarak Uğrak ekibiyle iletişime geçip platforma katılmak istiyorum, böylece öğrencilere doğrudan ulaşırım.</div>
+<ul><li>Süreç: iletişim → başvuru kaydı → görüşme → onay → ekip mekan hesabını açar → mekan kampanya girer.</li><li>Mekan hesabı yalnızca kendi mekanının verilerine erişebilir.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-18 · Kampanya yönetimi</span><span><span class="tag must">Must</span><span class="tag tsl">V1 taslak</span><span class="tag v2">V2</span><span class="small">UC-14</span></span></div>
+<div class="text">Mekan sahibi olarak öğrencilere özel kampanya oluşturup durdurmak istiyorum, böylece yoğun olmayan saatlerde öğrenci çekerim.</div>
+<ul><li>Başlık, indirim metni ve bitiş tarihiyle kampanya oluşturulur; kampanya durdurulup yeniden başlatılabilir.</li><li>Her kampanyanın kullanım sayısı görünür.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-19 · Kod doğrulama</span><span><span class="tag must">Must</span><span class="tag tsl">V1 taslak</span><span class="tag v2">V2</span><span class="small">UC-15</span></span></div>
+<div class="text">Mekan sahibi olarak öğrencinin gösterdiği kodu doğrulamak istiyorum, böylece indirimin sadece gerçek öğrencilere ve bir kez uygulandığından emin olurum.</div>
+<ul><li>Geçerli kodda kampanya adı ve “Geçerli” sonucu gösterilir; kod kullanıldı olarak işaretlenir.</li><li>Başka mekana ait, kullanılmış veya süresi dolmuş kodda hata gösterilir.</li><li>Mekan, kodu kullanan öğrencinin kimliğini görmez.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-20 · İstatistikler</span><span><span class="tag could">Could</span><span class="tag tsl">V1 taslak</span><span class="small">UC-16</span></span></div>
+<div class="text">Mekan sahibi olarak kod kullanım sayılarını ve öğrenci puanlarımı görmek istiyorum, böylece kampanyalarımın işe yarayıp yaramadığını anlarım.</div>
+<ul><li>Haftalık kod kullanımı, aktif kampanya sayısı, kriter ortalamaları ve son yorumlar gösterilir.</li></ul></div>
+
+<h2>E7 · Yönetim paneli (V1 taslak)</h2>
+<div class="story"><div class="head"><span class="id">US-21 · Başvuru ve hesap yönetimi</span><span><span class="tag should">Should</span><span class="tag tsl">V1 taslak</span><span class="small">UC-17, UC-18</span></span></div>
+<div class="text">Admin olarak mekan başvurularını takip edip onaylanan mekanlar için hesap açmak istiyorum, böylece sadece anlaştığımız mekanlar kampanya yayınlar.</div>
+<ul><li>Başvurular “Beklemede / Görüşüldü / Onaylandı / Reddedildi” durumlarıyla listelenir.</li><li>Onaylanan başvurudan mekan hesabı oluşturulur ve yetkiliye giriş bilgisi gönderilir.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-22 · Üniversite alan adları</span><span><span class="tag should">Should</span><span class="tag tsl">V1 taslak</span><span class="small">UC-19</span></span></div>
+<div class="text">Admin olarak kabul edilen üniversite alan adlarını yönetmek istiyorum, böylece öğrenci alt alan adı kullanan üniversitelerde personel hesaplarını ayırırım.</div>
+<ul><li>Her üniversite için kabul edilen alan adları ve “öğrenci formatı doğrulandı” işareti tutulur.</li></ul></div>
+
+<h2>E8 · Gizlilik ve KVKK</h2>
+<div class="story"><div class="head"><span class="id">US-23 · Aydınlatma metni</span><span><span class="tag must">Must</span><span class="tag v1">V1</span></span></div>
+<div class="text">Kullanıcı olarak hangi verilerimin neden işlendiğini kayıt olmadan önce okumak istiyorum, böylece bilinçli onay veririm.</div>
+<ul><li>Aydınlatma metni kayıt ekranından, giriş ekranından ve profilden erişilebilir.</li><li>Kayıtta onay zorunludur ve onay zamanı kaydedilir.</li></ul></div>
+
+<div class="story"><div class="head"><span class="id">US-24 · Veri silme talebi</span><span><span class="tag should">Should</span><span class="tag v2">V2</span></span></div>
+<div class="text">Kullanıcı olarak hesabımın ve verilerimin silinmesini talep etmek istiyorum, böylece KVKK kapsamındaki hakkımı kullanırım.</div>
+<ul><li>Hesap silindiğinde profil, yorumlar ve favoriler silinir; kod kayıtları anonimleştirilir.</li></ul></div>
+
+<h2>Sonraki sürümlere bırakılan hikayeler</h2>
+<table>
+  <thead><tr><th style="width:12%">No</th><th>Hikaye</th><th style="width:14%">Öncelik</th></tr></thead>
+  <tbody>
+    <tr><td>US-25</td><td>Öğrenci olarak mekanları harita üzerinde görmek istiyorum (kampüs merkezli, 1 km yürüme halkası).</td><td><span class="tag should">Should</span></td></tr>
+    <tr><td>US-26</td><td>Öğrenci olarak kategorili bir forumda diğer öğrencilerle konuşmak istiyorum.</td><td><span class="tag could">Could</span></td></tr>
+    <tr><td>US-27</td><td>Öğrenci olarak favori mekanımda yeni kampanya çıkınca bildirim almak istiyorum.</td><td><span class="tag should">Should</span></td></tr>
+    <tr><td>US-28</td><td>Okul e-postası olmayan biri olarak mekanlara misafir olarak bakmak istiyorum.</td><td><span class="tag could">Could</span></td></tr>
+    <tr><td>US-29</td><td>Mezun olarak okul e-postam kapansa da (e-Devlet mezun belgesi vb. ile) platformda kalmak istiyorum.</td><td><span class="tag could">Could</span></td></tr>
+    <tr><td>US-30</td><td>Öğrenci olarak uygunsuz bir yorumu şikayet etmek istiyorum.</td><td><span class="tag should">Should</span></td></tr>
+  </tbody>
+</table>
+
+<!-- ============================ 5. FR ============================ -->
+<h1 id="fr">5. İşlevsel gereksinimler</h1>
+<table>
+  <thead><tr><th style="width:9%">No</th><th>Gereksinim</th><th style="width:12%">Hikaye</th><th style="width:13%">Sürüm</th></tr></thead>
+  <tbody>
+    <tr><td colspan="4"><b>Hesap ve doğrulama</b></td></tr>
+    <tr><td>FR-01</td><td>Sistem yalnızca <code>.edu.tr</code> ile biten ve üniversite listesindeki bir alan adına (veya alt alan adına) ait e-posta adreslerinin kaydına izin vermelidir.</td><td>US-01</td><td>V1</td></tr>
+    <tr><td>FR-02</td><td>Alan adı kontrolü hem istemcide hem veritabanı tetikleyicisinde yapılmalıdır.</td><td>US-01</td><td>V1</td></tr>
+    <tr><td>FR-03</td><td>Sistem e-posta adresinden üniversiteyi ve kampüsü otomatik belirlemeli ve profile kaydetmelidir.</td><td>US-01</td><td>V1</td></tr>
+    <tr><td>FR-04</td><td>Kayıt; takma ad (en fazla 24 karakter), e-posta, şifre (en az 8 karakter), öğrencilik beyanı ve KVKK onayı içermelidir.</td><td>US-01, US-23</td><td>V1</td></tr>
+    <tr><td>FR-05</td><td>Sistem kayıttan sonra okul adresine doğrulama linki göndermeli; link tıklanana kadar giriş engellenmelidir.</td><td>US-02</td><td>V1</td></tr>
+    <tr><td>FR-06</td><td>Doğrulama maili, gönderimler arasında en az 60 saniye olacak şekilde tekrar gönderilebilmelidir.</td><td>US-02</td><td>V1</td></tr>
+    <tr><td>FR-07</td><td>Link tıklandığında profilin doğrulama tarihi (<code>verified_at</code>) kaydedilmelidir.</td><td>US-02</td><td>V1</td></tr>
+    <tr><td>FR-08</td><td>Sistem doğrulama tarihinden 365 gün sonra kullanıcıyı yıllık doğrulamaya yönlendirmeli ve okul adresine 6 haneli kod göndermelidir.</td><td>US-04</td><td>V1</td></tr>
+    <tr><td>FR-09</td><td>Doğrulaması geçerli olmayan kullanıcının puan vermesi ve kampanya kodu alması veritabanı düzeyinde engellenmelidir.</td><td>US-04</td><td>V1</td></tr>
+    <tr><td>FR-10</td><td>Kullanıcı e-posta ve şifreyle giriş ve çıkış yapabilmeli; oturum cihazda saklanmalıdır.</td><td>US-03, US-05</td><td>V1</td></tr>
+    <tr><td colspan="4"><b>Profil ve avatar</b></td></tr>
+    <tr><td>FR-11</td><td>İlk girişte avatar oluşturma zorunlu olmalıdır; avatar saç modeli, saç rengi, ten rengi, tişört rengi ve gözlük seçeneklerinden oluşmalıdır.</td><td>US-06</td><td>V1</td></tr>
+    <tr><td>FR-12</td><td>Kullanıcı profilinde yalnızca takma ad ve avatar değiştirilebilmelidir; rol, üniversite ve doğrulama tarihi kullanıcı tarafından değiştirilemez.</td><td>US-06, US-07</td><td>V1</td></tr>
+    <tr><td>FR-13</td><td>Profil sayfası doğrulama bitiş tarihini, kalan günü, favorileri ve kullanıcının yorumlarını göstermelidir.</td><td>US-07</td><td>V1</td></tr>
+    <tr><td colspan="4"><b>Mekanlar</b></td></tr>
+    <tr><td>FR-14</td><td>Mekan listesi varsayılan olarak kullanıcının kampüsüne göre gösterilmeli; “Tüm İstanbul” ve diğer kampüsler seçilebilmelidir.</td><td>US-08</td><td>V1</td></tr>
+    <tr><td>FR-15</td><td>Liste ad/semt araması, kategori filtresi ve puan / yakınlık / fiyat sıralaması sunmalıdır.</td><td>US-09</td><td>V1</td></tr>
+    <tr><td>FR-16</td><td>Her mekan için genel puan, dört kriter ortalaması ve yorum sayısı veritabanındaki <code>venue_stats</code> görünümünden hesaplanmalıdır.</td><td>US-08, US-10</td><td>V1</td></tr>
+    <tr><td>FR-17</td><td>Mekanın seçili kampüse kuş uçuşu mesafesi ve tahmini yürüme süresi gösterilmelidir.</td><td>US-08, US-10</td><td>V1</td></tr>
+    <tr><td>FR-18</td><td>Kullanıcı mekanları favorilere ekleyip çıkarabilmelidir.</td><td>US-11</td><td>V1</td></tr>
+    <tr><td colspan="4"><b>Puanlama</b></td></tr>
+    <tr><td>FR-19</td><td>Puan; fiyat, ders, porsiyon ve ortam için 1–5 arası dört zorunlu değer ve en fazla 500 karakterlik isteğe bağlı yorumdan oluşmalıdır.</td><td>US-12</td><td>V1</td></tr>
+    <tr><td>FR-20</td><td>Bir kullanıcı bir mekana en fazla bir yorum yapabilmeli; ikinci gönderim mevcut yorumu güncellemelidir.</td><td>US-12, US-13</td><td>V1</td></tr>
+    <tr><td>FR-21</td><td>Kullanıcı yalnızca kendi yorumunu düzenleyip silebilmelidir.</td><td>US-13</td><td>V1</td></tr>
+    <tr><td>FR-22</td><td>Yorum listesinde e-posta gösterilmemeli; takma ad, avatar ve üniversite kısaltması gösterilmelidir.</td><td>US-14</td><td>V1</td></tr>
+    <tr><td colspan="4"><b>Kampanyalar</b></td></tr>
+    <tr><td>FR-23</td><td>Yalnızca aktif ve tarih aralığındaki kampanyalar listelenmelidir.</td><td>US-15</td><td>V1</td></tr>
+    <tr><td>FR-24</td><td>Kampanya kodu 6 karakterli, benzersiz, 10 dakika geçerli ve tek kullanımlık olmalı; QR karşılığıyla gösterilmelidir.</td><td>US-16</td><td>V1</td></tr>
+    <tr><td>FR-25</td><td>Aynı kullanıcı ve kampanya için geçerli kod varsa yeni kod üretilmemelidir.</td><td>US-16</td><td>V1</td></tr>
+    <tr><td>FR-26</td><td>Mekan sahibi yalnızca kendi mekanına ait, süresi dolmamış ve kullanılmamış kodu kullanıldı olarak işaretleyebilmelidir.</td><td>US-19</td><td>V1 (DB) / V2 (ekran)</td></tr>
+    <tr><td colspan="4"><b>Paneller</b></td></tr>
+    <tr><td>FR-27</td><td>Mekan paneli; özet, kampanyalar, kod doğrulama, yorumlar ve mekan bilgileri bölümlerini içermelidir.</td><td>US-18–20</td><td>V1 taslak</td></tr>
+    <tr><td>FR-28</td><td>Mekan sahibi yalnızca kendi mekanının kampanyalarını oluşturup değiştirebilmelidir.</td><td>US-18</td><td>V1 (DB) / V2</td></tr>
+    <tr><td>FR-29</td><td>Admin paneli; mekan başvuruları, mekan hesabı oluşturma, mekanlar ve üniversite alan adları bölümlerini içermelidir.</td><td>US-21, US-22</td><td>V1 taslak</td></tr>
+    <tr><td>FR-30</td><td>Mekan başvuruları herkes tarafından oluşturulabilmeli, yalnızca admin tarafından görülüp güncellenebilmelidir.</td><td>US-17, US-21</td><td>V1 (DB)</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================ 6. NFR ============================ -->
+<h1 id="nfr">6. İşlevsel olmayan gereksinimler</h1>
+<table>
+  <thead><tr><th style="width:10%">No</th><th style="width:18%">Kategori</th><th>Gereksinim ve ölçüt</th></tr></thead>
+  <tbody>
+    <tr><td>NFR-01</td><td>Güvenlik</td><td>Tüm tablolarda RLS açık olmalıdır. Kullanıcılar yalnızca yetkili oldukları satırları okuyup yazabilir. Kritik işlemler (kod üretme, kod kullanma, yeniden doğrulama) yalnızca veritabanı fonksiyonlarıyla yapılır.</td></tr>
+    <tr><td>NFR-02</td><td>Güvenlik</td><td>Şifreler düz metin olarak saklanmaz; Supabase Auth tarafından tek yönlü özet (hash) olarak tutulur. Tüm iletişim HTTPS üzerinden yapılır.</td></tr>
+    <tr><td>NFR-03</td><td>Güvenlik</td><td>Kampanya kodları tahmin edilemez rastgele karakterlerden oluşur. Karışabilen karakterler (0/O, 1/I) kullanılmaz. Kod 10 dakika sonra geçersiz olur.</td></tr>
+    <tr><td>NFR-04</td><td>Gizlilik</td><td>E-posta adresi diğer kullanıcılara ve mekanlara gösterilmez. Yorum akışı yalnızca gerekli sütunları dışarı açan bir görünümden (<code>review_feed</code>) okunur.</td></tr>
+    <tr><td>NFR-05</td><td>Performans</td><td>Mekan listesi ve mekan detayı, 4G bağlantıda 2 saniye içinde yüklenmelidir. Liste için tek seferde en fazla üç paralel sorgu yapılır.</td></tr>
+    <tr><td>NFR-06</td><td>Kullanılabilirlik</td><td>Yeni bir öğrenci kayıt, doğrulama ve avatar adımlarını 3 dakika içinde tamamlayabilmelidir. Hata mesajları Türkçe, anlaşılır ve alanın yanında gösterilir.</td></tr>
+    <tr><td>NFR-07</td><td>Erişilebilirlik</td><td>Dokunulabilir alanlar en az 36×36 px olmalı; butonlara ve ikonlara erişilebilirlik etiketi verilmeli; puan renkleri metinle de desteklenmelidir (renk tek başına anlam taşımaz).</td></tr>
+    <tr><td>NFR-08</td><td>Taşınabilirlik</td><td>Uygulama tek kod tabanıyla web, Android ve iOS’ta çalışmalıdır (Expo / React Native Web). Platforma özel kod en aza indirilir.</td></tr>
+    <tr><td>NFR-09</td><td>Bakım kolaylığı</td><td>Kod TypeScript ile yazılır. Ekranlar veri katmanını tek bir <code>Api</code> arayüzü üzerinden kullanır; veri kaynağı (demo / Supabase) ekranları değiştirmeden değiştirilebilir.</td></tr>
+    <tr><td>NFR-10</td><td>Güvenilirlik</td><td>Supabase bağlantısı tanımlı değilse uygulama demo modunda çalışmaya devam eder; sunum internet ya da mail servisine bağımlı kalmaz.</td></tr>
+    <tr><td>NFR-11</td><td>Ölçeklenebilirlik</td><td>Yeni bir üniversite veya şehir eklemek kod değişikliği gerektirmez; yalnızca <code>universities</code> tablosuna satır eklenir.</td></tr>
+    <tr><td>NFR-12</td><td>Yerelleştirme</td><td>Arayüz Türkçedir; arama Türkçe büyük/küçük harf kurallarına (İ/ı) uygun çalışır; tarihler <code>tr-TR</code> biçiminde gösterilir.</td></tr>
+    <tr><td>NFR-13</td><td>Uyumluluk</td><td>Kişisel veri işleme KVKK’ya uygun yapılır (Bölüm 7).</td></tr>
+    <tr><td>NFR-14</td><td>Telif</td><td>Görseller, avatar parçaları ve arayüz özgün tasarımdır; üçüncü taraf oyun ya da marka görselleri kullanılmaz.</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================ 7. KVKK ============================ -->
+<h1 id="kvkk">7. KVKK ve kişisel verilerin korunması</h1>
+<p>Uğrak kişisel veri işleyen bir sistemdir. Bu bölüm 6698 sayılı KVKK kapsamında hangi verinin hangi amaçla ve hangi hukuki sebeple işlendiğini, ne kadar saklandığını ve hangi tedbirlerin alındığını tanımlar. Uygulamadaki aydınlatma metni bu bölüme dayanır.</p>
+<div class="note"><b>Not:</b> Bu bölüm ders projesi kapsamında hazırlanmış bir taslaktır. Gerçek yayından önce bir hukukçu tarafından kontrol edilmelidir.</div>
+
+<h2>7.1 Veri envanteri</h2>
+<table>
+  <thead><tr><th style="width:20%">Veri</th><th style="width:27%">Amaç</th><th style="width:27%">Hukuki sebep (KVKK m.5/2)</th><th>Saklama süresi</th></tr></thead>
+  <tbody>
+    <tr><td>Okul e-posta adresi</td><td>Hesap oluşturma, öğrencilik doğrulaması, yıllık doğrulama</td><td>(c) sözleşmenin kurulması ve ifası</td><td>Hesap açık olduğu sürece</td></tr>
+    <tr><td>Takma ad, avatar</td><td>Yorumlarda kullanıcıyı temsil etme</td><td>(c) sözleşmenin ifası</td><td>Hesap açık olduğu sürece</td></tr>
+    <tr><td>Üniversite, doğrulama tarihi</td><td>Kampüse göre içerik, öğrenci statüsünün süresi</td><td>(c) sözleşmenin ifası</td><td>Hesap açık olduğu sürece</td></tr>
+    <tr><td>Şifre özeti, oturum bilgisi</td><td>Kimlik doğrulama, hesap güvenliği</td><td>(c) sözleşmenin ifası · (f) meşru menfaat</td><td>Hesap açık olduğu sürece</td></tr>
+    <tr><td>Puan, yorum, favori</td><td>Platformun temel hizmeti</td><td>(c) sözleşmenin ifası</td><td>Hesap silinene kadar</td></tr>
+    <tr><td>Kampanya kodu kayıtları</td><td>Tek kullanım kontrolü, suistimalin önlenmesi, mekan istatistikleri</td><td>(f) meşru menfaat · (e) hakkın korunması</td><td>En fazla 2 yıl, sonra anonim</td></tr>
+    <tr><td>KVKK onay zamanı</td><td>Aydınlatmanın yapıldığının ispatı</td><td>(ç) hukuki yükümlülük · (e) hakkın korunması</td><td>Hesap silindikten sonra 2 yıl</td></tr>
+    <tr><td>Mekan yetkilisi adı, telefonu, e-postası</td><td>Mekan katılım süreci ve hesap açma</td><td>(c) sözleşmenin kurulması</td><td>Sözleşme süresince + 2 yıl</td></tr>
+  </tbody>
+</table>
+<p>Uğrak <b>T.C. kimlik numarası, öğrenci belgesi, fotoğraf, konum veya özel nitelikli kişisel veri toplamaz.</b> V2’de anlık konum kullanılması durumunda konum yalnızca cihazda hesaplamada kullanılacak, sunucuya kaydedilmeyecek ve izin işletim sistemi üzerinden ayrıca istenecektir.</p>
+
+<h2>7.2 İlkeler ve uygulamadaki karşılığı</h2>
+<table>
+  <thead><tr><th style="width:30%">KVKK ilkesi (m.4)</th><th>Uğrak’taki uygulama</th></tr></thead>
+  <tbody>
+    <tr><td>Belirli, açık ve meşru amaç</td><td>Her veri alanı Bölüm 7.1’deki bir amaca bağlıdır.</td></tr>
+    <tr><td>Amaçla bağlantılı, sınırlı ve ölçülü olma</td><td>Ad-soyad, telefon, doğum tarihi istenmez. Takma ad kullanılır, fotoğraf yerine pixel avatar vardır.</td></tr>
+    <tr><td>Doğru ve gerektiğinde güncel olma</td><td>Öğrenci statüsü yılda bir yeniden doğrulanır.</td></tr>
+    <tr><td>Gerekli süre kadar muhafaza</td><td>Saklama süreleri tanımlıdır. 2 yıl hiç giriş yapılmayan hesaplar silinir (V2’de zamanlanmış görev).</td></tr>
+  </tbody>
+</table>
+
+<h2>7.3 Aydınlatma ve rıza</h2>
+<ul>
+  <li>Aydınlatma metni kayıt ekranında onay kutusuyla, ayrıca giriş ekranında ve profilde bağlantıyla sunulur (<code>/kvkk</code>). Onay zamanı <code>profiles.kvkk_accepted_at</code> alanına kaydedilir.</li>
+  <li>V1’deki işlemler sözleşmenin ifası ve meşru menfaat sebeplerine dayandığından ayrıca açık rıza gerekmez. Pazarlama bildirimleri (V2) ve konum gibi zorunlu olmayan işlemler için ayrı ve isteğe bağlı açık rıza alınacaktır.</li>
+</ul>
+
+<h2>7.4 Aktarım</h2>
+<ul>
+  <li>Veriler barındırma ve veritabanı hizmeti sağlayan Supabase altyapısında saklanır. Proje bölgesi olarak Avrupa (Frankfurt) seçilir. Yurt dışına aktarım KVKK m.9’daki şartlara uygun yürütülür.</li>
+  <li>Mekanlara öğrenci kimliği aktarılmaz. Mekan yalnızca kendi kampanya kodunun geçerliliğini ve toplu istatistikleri görür.</li>
+</ul>
+
+<h2>7.5 İlgili kişi hakları (m.11)</h2>
+<p>Kullanıcılar verilerinin işlenip işlenmediğini öğrenme, bilgi talep etme, düzeltme, silme, aktarıldığı kişileri bilme ve itiraz haklarına sahiptir. V1’de başvurular proje e-posta adresi üzerinden alınır ve en geç 30 gün içinde yanıtlanır. V2’de profilde “Verilerimi indir” ve “Hesabımı sil” işlemleri eklenecektir (US-24).</p>
+
+<h2>7.6 Teknik ve idari tedbirler</h2>
+<div class="grid2">
+<div class="box"><b>Teknik</b><ul style="margin-top:4pt">
+  <li>Tüm tablolarda RLS; sütun düzeyi güncelleme yetkisi</li>
+  <li>Şifre özeti ve oturum yönetimi Supabase Auth’ta</li>
+  <li>HTTPS ile şifreli iletişim</li>
+  <li>E-postayı dışarı açmayan yorum görünümü</li>
+  <li>Kritik işlemler yalnızca sunucu fonksiyonlarında</li>
+  <li>Gizli anahtarlar koda gömülmez (<code>.env</code>, git dışı)</li>
+</ul></div>
+<div class="box"><b>İdari</b><ul style="margin-top:4pt">
+  <li>Veritabanı yönetici erişimi yalnızca iki ekip üyesinde</li>
+  <li>Admin rolü yalnızca veritabanından elle atanır</li>
+  <li>Mekan sözleşmesinde öğrenci verisinin talep edilmeyeceği maddesi</li>
+  <li>Veri ihlali durumunda 72 saat içinde Kurul’a bildirim prosedürü</li>
+</ul></div>
+</div>
+
+<!-- ============================ 8. VERİ MODELİ ============================ -->
+<h1 id="veri">8. Veri modeli ve backend mimarisi</h1>
+<p>Backend Supabase üzerinde çalışan PostgreSQL veritabanıdır. Ayrı bir uygulama sunucusu yoktur. İş kuralları tetikleyiciler, fonksiyonlar ve RLS ile veritabanında uygulanır, uygulama Supabase’in otomatik REST API’sini kullanır. Şemanın tamamı tek dosyadadır: <code>supabase/schema.sql</code>.</p>
+<div class="figure"><img src="diagrams/er.svg" style="max-height:215mm"><div class="caption">Şekil 6 — Varlık-ilişki diyagramı</div></div>
+
+<h2>8.1 Tablolar</h2>
+<table>
+  <thead><tr><th style="width:20%">Tablo</th><th>İçerik ve kurallar</th></tr></thead>
+  <tbody>
+    <tr><td><code>universities</code></td><td>İstanbul üniversiteleri, kabul edilen e-posta alan adları, kampüs koordinatı. Herkes okuyabilir.</td></tr>
+    <tr><td><code>profiles</code></td><td>Kullanıcı profili (auth.users ile 1-1). Rol, doğrulama tarihi, avatar (jsonb), KVKK onayı. Kullanıcı yalnızca kendi profilini görür ve yalnızca takma ad ile avatarı değiştirebilir.</td></tr>
+    <tr><td><code>venues</code></td><td>Mekanlar, yakın kampüs ve mekan sahibi hesabı. Giriş yapan herkes aktif mekanları okur; yalnızca admin yazar.</td></tr>
+    <tr><td><code>reviews</code></td><td>Dört kriter puanı ve yorum. <code>UNIQUE(user_id, venue_id)</code>. Ekleme ve güncelleme için doğrulamanın geçerli olması gerekir.</td></tr>
+    <tr><td><code>campaigns</code></td><td>Mekan kampanyaları. Herkes aktif olanları okur; yalnızca mekanın sahibi ve admin yazar.</td></tr>
+    <tr><td><code>redemptions</code></td><td>Kampanya kodları. Yalnızca <code>create_redemption()</code> ve <code>redeem_code()</code> fonksiyonlarıyla yazılır.</td></tr>
+    <tr><td><code>favorites</code></td><td>Kullanıcıya özel favoriler.</td></tr>
+    <tr><td><code>venue_applications</code></td><td>Mekan katılım başvuruları. Herkes ekleyebilir, yalnızca admin okur.</td></tr>
+  </tbody>
+</table>
+
+<h2>8.2 Tetikleyiciler, fonksiyonlar ve görünümler</h2>
+<table>
+  <thead><tr><th style="width:30%">Nesne</th><th>Görev</th></tr></thead>
+  <tbody>
+    <tr><td><code>check_edu_email</code> (BEFORE INSERT auth.users)</td><td>Alan adı listede değilse kaydı reddeder.</td></tr>
+    <tr><td><code>handle_new_user</code> (AFTER INSERT)</td><td>Profil satırını oluşturur; üniversiteyi, takma adı ve KVKK onayını yazar.</td></tr>
+    <tr><td><code>handle_email_confirmed</code> (AFTER UPDATE)</td><td>Doğrulama linki tıklanınca <code>verified_at</code> alanını doldurur.</td></tr>
+    <tr><td><code>is_verified(uid)</code></td><td>Doğrulama son 365 gün içinde mi? RLS kurallarında kullanılır.</td></tr>
+    <tr><td><code>refresh_verification()</code></td><td>Son 15 dakikada e-posta koduyla açılmış oturumda doğrulama tarihini yeniler.</td></tr>
+    <tr><td><code>create_redemption(kampanya)</code></td><td>Doğrulama ve kampanya kontrolü yapar; benzersiz, 10 dakika geçerli kod üretir.</td></tr>
+    <tr><td><code>redeem_code(kod)</code></td><td>Kodun mekan sahibinin mekanına ait, geçerli ve kullanılmamış olduğunu kontrol edip kullanır.</td></tr>
+    <tr><td><code>venue_stats</code> (görünüm)</td><td>Mekan başına kriter ortalamaları ve yorum sayısı.</td></tr>
+    <tr><td><code>review_feed</code> (görünüm)</td><td>Yorum + yazarın takma adı, avatarı, üniversite kısaltması (e-posta hariç).</td></tr>
+  </tbody>
+</table>
+
+<h2>8.3 Uygulama mimarisi</h2>
+<p>İstemci Expo Router ile dosya tabanlı yönlendirme kullanır. Ekranlar <code>src/app/</code>, ortak bileşenler <code>src/components/</code>, veri katmanı <code>src/lib/api/</code> altındadır. Veri katmanı iki uygulamaya sahiptir: <b>Supabase</b> (gerçek backend) ve <b>Demo</b> (tarayıcıda; doğrulama maillerini uygulama içi “demo gelen kutusu”nda gösterir). Hangisinin çalışacağı <code>.env</code> dosyasındaki Supabase bilgilerine göre otomatik seçilir. Kurallar iki modda da aynıdır.</p>
+
+<!-- ============================ 9. RİSKLER ============================ -->
+<h1 id="risk">9. Riskler, kısıtlar ve açık konular</h1>
+
+<h2>9.1 Personel ve öğrencinin ayırt edilmesi</h2>
+<p>Akademik ve idari personelin e-posta adresleri de <code>.edu.tr</code> uzantılıdır. Yalnızca e-posta ile personel ve öğrenciyi %100 ayırt etmek mümkün değildir. Değerlendirilen seçenekler:</p>
+<table>
+  <thead><tr><th style="width:26%">Yöntem</th><th>Açıklama</th><th style="width:22%">Karar</th></tr></thead>
+  <tbody>
+    <tr><td>1. Öğrenci alt alan adı listesi</td><td>Öğrencilere ayrı alt alan adı veren üniversitelerde yalnızca o alt alan kabul edilir (<code>universities.domains</code>).</td><td><span class="tag v1">V1 — kullanılıyor</span></td></tr>
+    <tr><td>2. Mail formatı sezgisi</td><td>Öğrenci numarası içeren adres kalıbı. Güvenilir değil, kural olarak kullanılmaz.</td><td>Kullanılmıyor</td></tr>
+    <tr><td>3. Kullanıcı beyanı</td><td>Kayıtta “aktif öğrenciyim” beyanı; aykırı kullanım şikayet edilebilir.</td><td><span class="tag v1">V1 — kullanılıyor</span></td></tr>
+    <tr><td>4. Kasada fiziksel kontrol</td><td>Mekan kodu kabul ederken öğrenci kimlik kartına bakar. Suistimal riskinin en yüksek olduğu kampanya noktasını kapatır.</td><td><span class="tag v1">V1 — süreç kuralı</span></td></tr>
+    <tr><td>5. e-Devlet öğrenci belgesi</td><td>Barkodla doğrulanabilir ama otomatik API yoktur; elle kontrol ve ek KVKK yükü getirir.</td><td>Mezun akışı için değerlendirilecek</td></tr>
+    <tr><td>6. Üniversite kimlik federasyonu (SSO)</td><td>Kişinin öğrenci/personel bilgisini doğrudan verir; kurumsal anlaşma gerektirir.</td><td>Uzun vadeli hedef</td></tr>
+  </tbody>
+</table>
+<p><b>Sonuç:</b> V1’de 1 + 3 + 4 katmanlı yapı kullanılır ve bu durum bilinen bir kısıt olarak kabul edilir. Personelin mekan puanlaması küçük bir risktir; asıl suistimal noktası olan kampanyalar kasadaki kimlik kontrolüyle korunur.</p>
+
+<h2>9.2 Diğer riskler</h2>
+<table>
+  <thead><tr><th style="width:24%">Risk</th><th style="width:11%">Etki</th><th>Önlem</th></tr></thead>
+  <tbody>
+    <tr><td>Doğrulama maillerinin okul sunucularında spam’e düşmesi veya gecikmesi</td><td>Yüksek</td><td>Kendi alan adıyla SMTP servisi (SPF/DKIM) bağlanır; “tekrar gönder” ve spam klasörü uyarısı vardır. Sunumda demo modu kullanılabilir.</td></tr>
+    <tr><td>Supabase ücretsiz planındaki mail gönderim limiti</td><td>Orta</td><td>Özel SMTP servisi bağlanır.</td></tr>
+    <tr><td>Soğuk başlangıç (boş uygulama)</td><td>Yüksek</td><td>Tek kampüsle (Arel çevresi) başlanır, mekan başvuruları ekip tarafından aktif olarak toplanır.</td></tr>
+    <tr><td>Sahte veya kötü niyetli yorum</td><td>Orta</td><td>Edu doğrulaması, mekan başına tek yorum, yıllık doğrulama; V2’de şikayet ve moderasyon.</td></tr>
+    <tr><td>Mezunların edu mailinin açık kalması</td><td>Düşük</td><td>Yıllık yeniden doğrulama sınırlar; mezun rolü sonraki sürümde ele alınacak.</td></tr>
+    <tr><td>Mekan verisinin dış kaynaktan çekilmesi (Google Places)</td><td>Orta</td><td>Hizmet koşulları kalıcı veri saklamayı kısıtlar; yalnızca izin verilen alanlar (ör. place_id) saklanacak, koşullar V2’de incelenecek.</td></tr>
+    <tr><td>Kod ekran görüntüsüyle paylaşılması</td><td>Düşük</td><td>Kod 10 dakika geçerli ve tek kullanımlık; kasada kimlik kontrolü.</td></tr>
+    <tr><td>Kişisel veri ihlali</td><td>Yüksek</td><td>RLS, minimum veri, gizli anahtarların koda konmaması, ihlal bildirim prosedürü.</td></tr>
+  </tbody>
+</table>
+
+<h2>9.3 Açık konular</h2>
+<ul>
+  <li>Misafir rolünün yetkileri (yalnızca görüntüleme mi?) ve mezun doğrulama yöntemi — sonraki sürümde karar verilecek.</li>
+  <li>İstanbul’daki her üniversitenin öğrenci e-posta formatının tek tek doğrulanması (admin panelindeki “kontrol edilecek” işaretleri).</li>
+  <li>Mekanlarla gelir modeli (kampanya başına, aylık abonelik) — ürün kararı, ders kapsamı dışında.</li>
+</ul>
+
+<!-- ============================ 10. SÜRÜM ============================ -->
+<h1 id="surum">10. Sürüm kapsamı</h1>
+<table>
+  <thead><tr><th style="width:30%">Özellik</th><th style="width:17%">V1 (bu sunum)</th><th>Sonraki sürümler</th></tr></thead>
+  <tbody>
+    <tr><td>Edu e-posta ile kayıt, doğrulama maili, giriş/çıkış</td><td><span class="tag v1">Çalışıyor</span></td><td>Şifre sıfırlama ekranı</td></tr>
+    <tr><td>Yıllık yeniden doğrulama</td><td><span class="tag v1">Çalışıyor</span></td><td>Bitişten 14 gün önce hatırlatma maili</td></tr>
+    <tr><td>KVKK aydınlatma ve onay</td><td><span class="tag v1">Çalışıyor</span></td><td>Veri indirme ve hesap silme</td></tr>
+    <tr><td>Pixel avatar</td><td><span class="tag v1">Basit sürüm</span></td><td>Gelişmiş oluşturucu: daha fazla parça, animasyon, 4 yön (tasarımı hazır)</td></tr>
+    <tr><td>Mekan listesi, detay, arama, filtre</td><td><span class="tag v1">Çalışıyor</span></td><td>Fotoğraflar, çalışma saatleri</td></tr>
+    <tr><td>4 kriterli puan ve yorum</td><td><span class="tag v1">Çalışıyor</span></td><td>Şikayet, moderasyon, mekanın yanıtı</td></tr>
+    <tr><td>Kampanya kodu (QR + 6 hane)</td><td><span class="tag v1">Çalışıyor</span></td><td>—</td></tr>
+    <tr><td>Favoriler</td><td><span class="tag v1">Çalışıyor</span></td><td>Favori mekan kampanya bildirimi</td></tr>
+    <tr><td>Mekan paneli</td><td><span class="tag tsl">Taslak</span></td><td>Canlı veri, kamerayla QR okutma</td></tr>
+    <tr><td>Admin paneli</td><td><span class="tag tsl">Taslak</span></td><td>Canlı veri, şikayet yönetimi</td></tr>
+    <tr><td>Harita</td><td>—</td><td>Kampüs merkezli harita, 1 km halkası, kampanyalı pinler</td></tr>
+    <tr><td>Forum</td><td>—</td><td>Kategorili öğrenci forumu</td></tr>
+    <tr><td>Bildirimler</td><td>—</td><td>Expo Notifications ile kampanya bildirimi</td></tr>
+    <tr><td>Misafir / mezun rolleri</td><td>—</td><td>Rol tanımı ve doğrulama yöntemi kararından sonra</td></tr>
+    <tr><td>Mobil uygulama (store)</td><td>Aynı kod Expo Go ile çalışır</td><td>EAS Build ile Android/iOS yayını</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================ 11. EKLER ============================ -->
+<h1 id="ek">11. Ekler</h1>
+
+<h2>Ek A — Ekran listesi (V1)</h2>
+<table>
+  <thead><tr><th style="width:24%">Adres</th><th>Ekran</th><th style="width:18%">Use case</th></tr></thead>
+  <tbody>
+    <tr><td><code>/giris</code></td><td>Giriş; kayıt, panel taslakları ve KVKK metnine bağlantılar</td><td>UC-03</td></tr>
+    <tr><td><code>/kayit</code></td><td>Öğrenci kaydı (anlık üniversite tespiti, beyan, KVKK onayı)</td><td>UC-01</td></tr>
+    <tr><td><code>/dogrulama?mod=kayit</code></td><td>“Mailini kontrol et”, tekrar gönder, (demo) gelen kutusu</td><td>UC-02</td></tr>
+    <tr><td><code>/dogrulama?mod=yenile</code></td><td>Yıllık yeniden doğrulama (6 haneli kod)</td><td>UC-04</td></tr>
+    <tr><td><code>/avatar</code></td><td>Pixel avatar oluşturucu</td><td>UC-06</td></tr>
+    <tr><td><code>/kesfet</code></td><td>Mekan listesi, kampüs seçimi, arama, filtre, sıralama, öne çıkan kampanya</td><td>UC-07, UC-11</td></tr>
+    <tr><td><code>/mekan/[id]</code></td><td>Mekan detayı, kriter puanları, kampanyalar, puan formu, yorumlar</td><td>UC-08–UC-12</td></tr>
+    <tr><td><code>/kampanyalar</code></td><td>Tüm aktif kampanyalar, kod alma</td><td>UC-12</td></tr>
+    <tr><td><code>/profil</code></td><td>Profil, doğrulama süresi, favoriler, yorumlar, çıkış, (demo) sunum araçları</td><td>UC-05, UC-06</td></tr>
+    <tr><td><code>/kvkk</code></td><td>KVKK aydınlatma metni</td><td>—</td></tr>
+    <tr><td><code>/panel</code></td><td>Mekan paneli taslağı: özet, kampanyalar, kod doğrulama, yorumlar, bilgiler</td><td>UC-13–UC-16</td></tr>
+    <tr><td><code>/admin</code></td><td>Admin paneli taslağı: başvurular, hesap oluşturma, mekanlar, üniversiteler</td><td>UC-17–UC-20</td></tr>
+  </tbody>
+</table>
+
+<h2>Ek B — Teknoloji yığını</h2>
+<table>
+  <thead><tr><th style="width:26%">Katman</th><th>Teknoloji</th><th style="width:36%">Seçim nedeni</th></tr></thead>
+  <tbody>
+    <tr><td>Mobil + web istemci</td><td>Expo SDK 58, React Native 0.88, React Native Web, TypeScript</td><td>Tek kodla web, Android ve iOS</td></tr>
+    <tr><td>Yönlendirme</td><td>Expo Router (dosya tabanlı)</td><td>Web adresleri ve mobil navigasyon aynı yapıda</td></tr>
+    <tr><td>Backend</td><td>Supabase: PostgreSQL, Auth, otomatik REST API</td><td>Ayrı sunucu yazmadan güvenli backend</td></tr>
+    <tr><td>Güvenlik</td><td>Row Level Security, SECURITY DEFINER fonksiyonlar, sütun yetkileri</td><td>Kurallar istemciden bağımsız uygulanır</td></tr>
+    <tr><td>Grafik</td><td>react-native-svg (pixel avatar, QR, ikonlar)</td><td>Her platformda aynı görünüm</td></tr>
+    <tr><td>QR</td><td>qrcode (saf JavaScript çekirdek)</td><td>Native modül gerektirmez</td></tr>
+    <tr><td>Yerel depolama</td><td>AsyncStorage (web’de localStorage)</td><td>Oturum ve demo verisi</td></tr>
+    <tr><td>Yayın</td><td>Statik web derlemesi (Netlify/Vercel), V2’de EAS Build</td><td>Ücretsiz ve hızlı</td></tr>
+  </tbody>
+</table>
+
+<h2>Ek C — İzlenebilirlik matrisi</h2>
+<table>
+  <thead><tr><th style="width:20%">Epik</th><th style="width:18%">Use case</th><th style="width:22%">Hikaye</th><th>İşlevsel gereksinim</th></tr></thead>
+  <tbody>
+    <tr><td>E1 Hesap ve doğrulama</td><td>UC-01–UC-05</td><td>US-01–US-05</td><td>FR-01–FR-10</td></tr>
+    <tr><td>E2 Profil ve avatar</td><td>UC-06</td><td>US-06, US-07</td><td>FR-11–FR-13</td></tr>
+    <tr><td>E3 Mekan keşfi</td><td>UC-07, UC-08, UC-11</td><td>US-08–US-11</td><td>FR-14–FR-18</td></tr>
+    <tr><td>E4 Puanlama</td><td>UC-09, UC-10</td><td>US-12–US-14</td><td>FR-19–FR-22</td></tr>
+    <tr><td>E5 Kampanyalar</td><td>UC-12</td><td>US-15, US-16</td><td>FR-23–FR-25</td></tr>
+    <tr><td>E6 Mekan paneli</td><td>UC-13–UC-16</td><td>US-17–US-20</td><td>FR-26–FR-28</td></tr>
+    <tr><td>E7 Yönetim paneli</td><td>UC-17–UC-20</td><td>US-21, US-22</td><td>FR-29, FR-30</td></tr>
+    <tr><td>E8 Gizlilik ve KVKK</td><td>—</td><td>US-23, US-24</td><td>FR-04, FR-22, NFR-04, NFR-13</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

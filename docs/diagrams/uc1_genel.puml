@@ -1,0 +1,27 @@
+@startuml
+!include _style.iuml
+left to right direction
+actor "Öğrenci" as O
+actor "Mekan Sahibi" as M
+actor "Admin\n(Uğrak ekibi)" as A
+actor "E-posta servisi\n(Supabase Auth)" as E <<sistem>>
+rectangle "Uğrak" {
+  usecase "Hesap ve doğrulama\n(UC-01…UC-05)" as P1
+  usecase "Profil ve avatar\n(UC-06)" as P2
+  usecase "Mekan keşfi\n(UC-07, UC-08)" as P3
+  usecase "Puan ve yorum\n(UC-09, UC-10)" as P4
+  usecase "Favoriler\n(UC-11)" as P5
+  usecase "Öğrenci kampanyaları\n(UC-12)" as P6
+  usecase "Mekan paneli\n(UC-13…UC-16)" as P7
+  usecase "Yönetim paneli\n(UC-17…UC-20)" as P8
+}
+O --> P1
+O --> P2
+O --> P3
+O --> P4
+O --> P5
+O --> P6
+M --> P7
+A --> P8
+P1 --> E
+@enduml

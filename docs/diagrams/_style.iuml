@@ -1,0 +1,26 @@
+skinparam defaultFontName "Inter"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1B1B1B
+skinparam ArrowThickness 1.3
+skinparam actorStyle awesome
+skinparam actor {
+  BorderColor #1B1B1B
+  BackgroundColor #FFE6CC
+}
+skinparam usecase {
+  BorderColor #1B1B1B
+  BackgroundColor #FFFFFF
+  BorderThickness 1.6
+}
+skinparam rectangle {
+  BorderColor #1B1B1B
+  BorderThickness 2
+  BackgroundColor #FFFBF2
+  FontStyle bold
+}
+skinparam note {
+  BorderColor #1B1B1B
+  BackgroundColor #FFF0A8
+}

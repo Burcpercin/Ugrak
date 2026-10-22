@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ugrak",
+    "name": "Uğrak",
     "slug": "ugrak",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -19,7 +19,24 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "asyncRoutes": {
+            "web": false
+          }
+        }
+      ],
+      "expo-font"
+    ],
+    "scheme": "ugrak",
+    "experiments": {
+      "typedRoutes": false
     }
   }
 }

@@ -1,0 +1,29 @@
+@startuml
+!include _style.iuml
+left to right direction
+actor "Doğrulanmış\nÖğrenci" as O
+rectangle "Uğrak — Öğrenci uygulaması" {
+  usecase "UC-07\nMekanları listele" as UC7
+  usecase "Kampüse göre filtrele" as F1
+  usecase "Ara / kategori seç" as F2
+  usecase "Puan / yakınlık / fiyata\ngöre sırala" as F3
+  usecase "UC-08\nMekan detayını görüntüle" as UC8
+  usecase "UC-09\n4 kriterle puan ver\nve yorum yaz" as UC9
+  usecase "UC-10\nYorumunu düzenle / sil" as UC10
+  usecase "UC-11\nFavorilere ekle / çıkar" as UC11
+  usecase "UC-12\nKampanya kodu al\n(QR + 6 hane, 10 dk)" as UC12
+  usecase "Doğrulama süresi\ngeçerli mi kontrol et" as V
+}
+O --> UC7
+O --> UC8
+O --> UC9
+O --> UC10
+O --> UC11
+O --> UC12
+F1 ..> UC7 : <<extend>>
+F2 ..> UC7 : <<extend>>
+F3 ..> UC7 : <<extend>>
+UC9 ..> V : <<include>>
+UC12 ..> V : <<include>>
+UC10 ..> UC9 : <<extend>>
+@enduml

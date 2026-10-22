@@ -1,0 +1,52 @@
+@startuml
+!include _style.iuml
+skinparam activity {
+  BorderColor #1B1B1B
+  BackgroundColor #FFFFFF
+  DiamondBackgroundColor #FFE6CC
+  DiamondBorderColor #1B1B1B
+}
+|Öğrenci|
+start
+:Okul e-postası, takma ad, şifre girer;
+:Öğrencilik beyanı + KVKK onayı verir;
+|Uygulama|
+if (Adres .edu.tr ve listedeki bir\nİstanbul üniversitesine mi ait?) then (hayır)
+  :Hata gösterir;
+  stop
+else (evet)
+endif
+|Veritabanı|
+if (Tetikleyici: alan adı kontrolü) then (geçersiz)
+  :Kaydı reddeder;
+  stop
+else (geçerli)
+  :Kullanıcı + profil oluşturur\n(verified_at = boş);
+endif
+|E-posta servisi|
+:Okul adresine doğrulama linki gönderir;
+|Öğrenci|
+:Linke tıklar;
+|Veritabanı|
+:email_confirmed_at dolar →\nverified_at = şimdi;
+|Öğrenci|
+:Avatarını oluşturur, uygulamayı kullanır;
+|Uygulama|
+repeat
+  :Her açılışta verified_at kontrol edilir;
+repeat while (365 gün doldu mu?) is (hayır)
+-> evet;
+:Yıllık doğrulama ekranına yönlendirir;
+|E-posta servisi|
+:Okul adresine 6 haneli kod gönderir;
+|Öğrenci|
+if (Kodu girebildi mi?) then (evet)
+  |Veritabanı|
+  :refresh_verification()\nverified_at = şimdi;
+  stop
+else (hayır — mezun / adres kapalı)
+  |Uygulama|
+  :Hesap görüntüleme modunda kalır\n(puan ve kampanya kapalı);
+  stop
+endif
+@enduml

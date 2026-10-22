@@ -1,0 +1,82 @@
+@startuml
+!include _style.iuml
+skinparam linetype ortho
+skinparam class {
+  BorderColor #1B1B1B
+  BackgroundColor #FFFFFF
+  HeaderBackgroundColor #DCE8FF
+  BorderThickness 1.6
+}
+hide circle
+hide methods
+entity "auth.users — Supabase Auth" as AU {
+  id : uuid <<PK>>
+  email
+  email_confirmed_at
+}
+entity universities {
+  id : serial <<PK>>
+  name, short_name
+  domains : text[]
+  student_domains_verified
+  campus_name, lat, lng
+}
+entity profiles {
+  id : uuid <<PK, FK>>
+  email
+  display_name
+  university_id : <<FK>>
+  avatar : jsonb
+  role : student | venue_owner | admin
+  verified_at
+  kvkk_accepted_at
+}
+entity venues {
+  id : uuid <<PK>>
+  name, category, district
+  lat, lng, price_level
+  university_id : <<FK>>
+  owner_id : <<FK>>
+}
+entity reviews {
+  id : uuid <<PK>>
+  user_id : <<FK>>
+  venue_id : <<FK>>
+  price, study, portion, vibe : 1-5
+  comment : en fazla 500
+  <<UNIQUE>> user_id + venue_id
+}
+entity campaigns {
+  id : uuid <<PK>>
+  venue_id : <<FK>>
+  title, discount_text
+  starts_at, ends_at, is_active
+}
+entity redemptions {
+  id : uuid <<PK>>
+  campaign_id : <<FK>>
+  user_id : <<FK>>
+  code : <<UNIQUE>>
+  expires_at, used_at
+}
+entity favorites {
+  user_id : <<PK, FK>>
+  venue_id : <<PK, FK>>
+}
+entity venue_applications {
+  id : uuid <<PK>>
+  venue_name, contact_name
+  phone, email, status
+}
+AU ||--|| profiles
+universities ||--o{ profiles
+universities ||--o{ venues
+profiles |o--o{ venues : sahibi
+profiles ||--o{ reviews
+venues ||--o{ reviews
+venues ||--o{ campaigns
+campaigns ||--o{ redemptions
+profiles ||--o{ redemptions
+profiles ||--o{ favorites
+venues ||--o{ favorites
+@enduml

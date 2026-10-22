@@ -1,0 +1,35 @@
+@startuml
+!include _style.iuml
+left to right direction
+actor "Öğrenci" as O
+actor "E-posta servisi" as E <<sistem>>
+rectangle "Uğrak — Hesap" {
+  usecase "UC-01\nKayıt ol" as UC1
+  usecase "Okul e-postasını ve\nİstanbul üniversitesini kontrol et" as I1
+  usecase "KVKK aydınlatma\nmetnini onayla" as I2
+  usecase "UC-02\nE-posta adresini doğrula\n(linke tıkla)" as UC2
+  usecase "UC-03\nGiriş yap" as UC3
+  usecase "UC-04\nYıllık yeniden doğrula" as UC4
+  usecase "6 haneli kod gönder" as I3
+  usecase "UC-05\nÇıkış yap" as UC5
+  usecase "UC-06\nPixel avatar oluştur / düzenle" as UC6
+  usecase "Doğrulama mailini\ntekrar gönder" as X1
+}
+O --> UC1
+O --> UC2
+O --> UC3
+O --> UC4
+O --> UC5
+O --> UC6
+UC1 ..> I1 : <<include>>
+UC1 ..> I2 : <<include>>
+UC4 ..> I3 : <<include>>
+X1 ..> UC2 : <<extend>>
+UC1 --> E
+I3 --> E
+note right of UC4
+  Doğrulama 365 gün geçerlidir.
+  Süre dolunca kullanıcı puan veremez
+  ve kampanya kodu alamaz.
+end note
+@enduml
