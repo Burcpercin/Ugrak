@@ -5,7 +5,8 @@ import { api, errorMessage } from '@/lib/api';
 import { checkStudentEmail } from '@/lib/universities';
 import { Logo } from '@/components/Brand';
 import { Checkbox } from '@/components/Checkbox';
-import { Banner, Box, Button, Field, H2, P, Row, Screen, Small } from '@/components/ui';
+import { Banner, Box, Button, Field, H2, P, Row, Small } from '@/components/ui';
+import { AuthLayout } from '@/components/AuthLayout';
 import { colors } from '@/theme';
 
 export default function Kayit() {
@@ -59,7 +60,7 @@ export default function Kayit() {
   const show = (k: keyof typeof errors) => (touched ? errors[k] : null);
 
   return (
-    <Screen>
+    <AuthLayout>
       <Row style={{ justifyContent: 'space-between', marginBottom: 14 }}>
         <Logo size={28} />
         <Link href="/giris" style={{ color: colors.blue, fontWeight: '700' }}>
@@ -141,6 +142,6 @@ export default function Kayit() {
       <Small style={{ marginTop: 16, textAlign: 'center' }}>
         Uğrak şimdilik sadece İstanbul’daki üniversitelerin öğrencilerine açık.
       </Small>
-    </Screen>
+    </AuthLayout>
   );
 }

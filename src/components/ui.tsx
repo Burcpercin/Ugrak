@@ -1,6 +1,10 @@
 import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { isNative } from '@/lib/useLayout';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -49,25 +53,52 @@ export const Small = ({ children, style, numberOfLines }: TProps) => (
 export function Screen({
   children,
   wide = false,
+  maxWidth,
   scroll = true,
   bg = colors.bg,
   contentStyle,
+  safeTop = true,
+  safeBottom = true,
 }: {
   children: React.ReactNode;
   wide?: boolean;
+  /** İçerik genişliği (px). Verilmezse wide ? 1180 : 480. */
+  maxWidth?: number;
   scroll?: boolean;
   bg?: string;
   contentStyle?: StyleProp<ViewStyle>;
+  /** Mobilde üstteki durum çubuğu / çentik kadar boşluk bırak (üstte başlık yoksa). */
+  safeTop?: boolean;
+  /** Mobilde alttaki ana ekran çizgisi kadar boşluk bırak (alt sekme çubuğu yoksa). */
+  safeBottom?: boolean;
 }) {
-  const inner = <View style={[s.inner, { maxWidth: wide ? 1180 : 480 }, contentStyle]}>{children}</View>;
+  const insets = useSafeAreaInsets();
+  // Güvenli alan boşlukları sadece telefonda; web'de tarayıcı bunu kendisi çözer.
+  const padTop = isNative && safeTop ? insets.top : 0;
+  const padBottom = isNative && safeBottom ? insets.bottom : 0;
+
+  const inner = (
+    <View style={[s.inner, { maxWidth: maxWidth ?? (wide ? 1180 : 480) }, contentStyle]}>{children}</View>
+  );
+  const body = scroll ? (
+    <ScrollView
+      contentContainerStyle={[s.scrollContent, { paddingTop: padTop, paddingBottom: 40 + padBottom }]}
+      keyboardShouldPersistTaps="handled"
+    >
+      {inner}
+    </ScrollView>
+  ) : (
+    <View style={{ flex: 1, paddingTop: padTop, paddingBottom: padBottom }}>{inner}</View>
+  );
   return (
     <View style={[s.screen, { backgroundColor: bg }]}>
-      {scroll ? (
-        <ScrollView contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled">
-          {inner}
-        </ScrollView>
+      {isNative ? (
+        // iOS'ta klavye açılınca form alanları klavyenin altında kalmasın
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          {body}
+        </KeyboardAvoidingView>
       ) : (
-        inner
+        body
       )}
     </View>
   );
@@ -84,6 +115,7 @@ export function Box({
   shadowOffset = shadow,
   onPress,
   padded = true,
+  accessibilityLabel,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -91,6 +123,7 @@ export function Box({
   shadowOffset?: number;
   onPress?: () => void;
   padded?: boolean;
+  accessibilityLabel?: string;
 }) {
   const content = (pressed: boolean) => (
     <View style={[{ marginRight: shadowOffset, marginBottom: shadowOffset }, style]}>
@@ -113,8 +146,12 @@ export function Box({
     </View>
   );
   if (!onPress) return content(false);
+  // Not: Burada accessibilityRole="button" KULLANILMIYOR. Web'de bu rol gerçek bir
+  // <button> etiketi üretir; kartın içinde favori kalbi gibi başka butonlar olduğunda
+  // "<button> cannot contain a nested <button>" hatası çıkar. Rolsüz Pressable web'de
+  // tıklanabilir ve klavyeyle odaklanabilir bir <div> olarak çizilir.
   return (
-    <Pressable onPress={onPress} accessibilityRole="button">
+    <Pressable onPress={onPress} accessibilityLabel={accessibilityLabel}>
       {({ pressed }) => content(pressed)}
     </Pressable>
   );

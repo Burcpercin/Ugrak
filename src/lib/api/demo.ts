@@ -10,7 +10,7 @@ import type {
   SignUpInput,
   VenueStats,
 } from '../types';
-import { checkStudentEmail, universityById } from '../universities';
+import { STATIC_CAMPUSES, checkStudentEmail, universityById } from '../universities';
 import { DEMO_AUTHORS, SEED_REVIEWS, SEED_VENUES, seedCampaigns } from '../seed';
 import { AppError } from './errors';
 
@@ -190,8 +190,12 @@ function author(s: Store, userId: string) {
 
 function toReviewItem(s: Store, r: DemoReview): ReviewItem {
   const a = author(s, r.user_id);
+  // Gerçek sistemdeki gibi: yorum yazarının kimliği ekrana gönderilmez,
+  // sadece "bu benim yorumum mu" bilgisi gider.
+  const { user_id, ...rest } = r;
   return {
-    ...r,
+    ...rest,
+    is_mine: !!s.sessionUserId && user_id === s.sessionUserId,
     display_name: a.display_name,
     avatar: a.avatar,
     university_short: universityById(a.university_id)?.short_name ?? null,
@@ -290,6 +294,11 @@ export const demoApi: Api = {
     }
   },
 
+  async handleAuthRedirect() {
+    // Demo modunda mail gerçekten gitmez; link uygulama içindeki demo gelen kutusunda.
+    return false;
+  },
+
   async getProfile() {
     const s = await load();
     const u = s.users.find((x) => x.id === s.sessionUserId);
@@ -324,6 +333,15 @@ export const demoApi: Api = {
     mail.opened = true;
     await save(s);
     emitMail();
+  },
+
+  async tryRefreshVerification() {
+    // Demoda link yerine kod kullanılıyor (sahte gelen kutusu).
+    return false;
+  },
+
+  async listCampuses() {
+    return STATIC_CAMPUSES;
   },
 
   async listVenues() {
@@ -408,7 +426,10 @@ export const demoApi: Api = {
     const existing = s.redemptions.find(
       (r) => r.user_id === u.id && r.campaign_id === campaignId && !r.used_at && new Date(r.expires_at).getTime() > Date.now(),
     );
-    if (existing) return existing;
+    if (existing) {
+      const { user_id: _u, ...pub } = existing;
+      return pub;
+    }
     const red = {
       id: uid(),
       user_id: u.id,
@@ -419,7 +440,8 @@ export const demoApi: Api = {
     };
     s.redemptions.push(red);
     await save(s);
-    return red;
+    const { user_id: _u, ...pub } = red;
+    return pub;
   },
 };
 

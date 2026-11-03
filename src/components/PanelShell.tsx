@@ -1,6 +1,8 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { isNative } from '@/lib/useLayout';
 import { colors, fonts } from '@/theme';
 import { Logo } from './Brand';
 import { Badge, Box, H3, P, Row, Small } from './ui';
@@ -24,6 +26,7 @@ export function PanelShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const wide = width >= 860;
 
@@ -51,7 +54,7 @@ export function PanelShell({
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Taslak şeridi */}
-      <View style={{ backgroundColor: colors.yellow, borderBottomWidth: 3, borderColor: colors.ink, paddingVertical: 6, paddingHorizontal: 16 }}>
+      <View style={{ backgroundColor: colors.yellow, borderBottomWidth: 3, borderColor: colors.ink, paddingTop: 6 + (isNative ? insets.top : 0), paddingBottom: 6, paddingHorizontal: 16 }}>
         <Text style={{ fontFamily: fonts.pixel, fontSize: 13, color: colors.ink, textAlign: 'center' }}>
           TASLAK EKRAN · ÖRNEK (MOCK) VERİ · Sunumda fikri göstermek içindir, veritabanına bağlı değildir
         </Text>
@@ -92,7 +95,7 @@ export function PanelShell({
           ) : null}
         </View>
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: wide ? 28 : 16, paddingBottom: 60 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: wide ? 28 : 16, paddingBottom: 60 + (isNative ? insets.bottom : 0) }}>
           <View style={{ maxWidth: 980, width: '100%' }}>
             <Text style={{ fontFamily: fonts.pixel, fontSize: wide ? 30 : 24, color: colors.ink, marginBottom: 16 }}>
               {title}

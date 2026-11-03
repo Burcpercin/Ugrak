@@ -8,6 +8,15 @@ export type University = {
   lng: number;
 };
 
+export type Campus = {
+  id: number;
+  university_id: number;
+  name: string;
+  district: string | null;
+  lat: number;
+  lng: number;
+};
+
 export type AvatarConfig = {
   skin: number;
   hairStyle: 'kisa' | 'uzun' | 'bere';
@@ -66,7 +75,8 @@ export type Scores = { price: number; study: number; portion: number; vibe: numb
 export type ReviewItem = Scores & {
   id: string;
   venue_id: string;
-  user_id: string;
+  /** Giriş yapan kullanıcının kendi yorumu mu? (Yazarın kimliği istemciye gönderilmez.) */
+  is_mine: boolean;
   comment: string | null;
   created_at: string;
   updated_at: string;
@@ -115,6 +125,11 @@ export interface Api {
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
   resendVerification(email: string): Promise<void>;
+  /**
+   * Telefonda doğrulama linki uygulamayı açtığında gelen adresten oturumu kurar.
+   * Adreste oturum bilgisi yoksa false döner.
+   */
+  handleAuthRedirect(link: string): Promise<boolean>;
 
   getProfile(): Promise<Profile | null>;
   updateProfile(patch: { display_name?: string; avatar?: AvatarConfig }): Promise<Profile>;
@@ -123,7 +138,14 @@ export interface Api {
   requestReverify(email: string): Promise<void>;
   /** Gelen kodu doğrula ve doğrulama tarihini yenile. */
   confirmReverify(email: string, code: string): Promise<void>;
+  /**
+   * Oturum okul mailindeki linkle (son 15 dk içinde) açıldıysa doğrulamayı sessizce
+   * yeniler. Şifreyle girilmişse veritabanı reddeder; o zaman false döner.
+   */
+  tryRefreshVerification(): Promise<boolean>;
 
+  /** Konum izni verilmezse seçilebilecek kampüsler (herkese açık). */
+  listCampuses(): Promise<Campus[]>;
   listVenues(): Promise<VenueListItem[]>;
   getVenue(id: string): Promise<VenueDetail | null>;
   saveReview(venueId: string, scores: Scores, comment: string): Promise<void>;

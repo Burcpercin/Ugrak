@@ -1,24 +1,23 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { RequireStudent } from '@/components/RequireStudent';
+import { OpenToGuests } from '@/components/RequireStudent';
 import { PixelIcon } from '@/components/Avatar';
+import { isNative } from '@/lib/useLayout';
 import { colors, fonts } from '@/theme';
 
 export default function TabsLayout() {
   return (
-    <RequireStudent>
+    <OpenToGuests>
       <Tabs
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: colors.blue,
           tabBarInactiveTintColor: colors.muted,
-          tabBarStyle: {
-            backgroundColor: colors.paper,
-            borderTopWidth: 3,
-            borderTopColor: colors.ink,
-            height: 64,
-            paddingTop: 6,
-          },
+          // Web'de gezinme üstteki menüden (TopNav) yapılır, alt çubuk gizli.
+          // Telefonda alt sekme çubuğu görünür; alttaki güvenli alanı kendisi ayarlar.
+          tabBarStyle: isNative
+            ? { backgroundColor: colors.paper, borderTopWidth: 3, borderTopColor: colors.ink, paddingTop: 6 }
+            : { display: 'none' },
           tabBarLabelStyle: { fontFamily: fonts.pixel, fontSize: 12 },
           sceneStyle: { backgroundColor: colors.bg },
         }}
@@ -36,6 +35,6 @@ export default function TabsLayout() {
           options={{ title: 'Profil', tabBarIcon: ({ color }) => <PixelIcon name="profil" color={String(color)} /> }}
         />
       </Tabs>
-    </RequireStudent>
+    </OpenToGuests>
   );
 }

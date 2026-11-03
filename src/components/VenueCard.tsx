@@ -24,7 +24,7 @@ export function VenueCard({
 }) {
   const statKey = (k: string) => (v.stats as any)[`avg_${k}`] as number | null;
   return (
-    <Box onPress={onPress} style={{ marginBottom: 14 }}>
+    <Box onPress={onPress} style={{ marginBottom: 14 }} accessibilityLabel={`${v.name} detayını aç`}>
       <Row style={{ alignItems: 'flex-start', gap: 12 }}>
         <ScoreTile value={v.stats.avg_overall} />
         <View style={{ flex: 1 }}>

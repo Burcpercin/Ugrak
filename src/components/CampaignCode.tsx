@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, Text, View } from 'react-native';
+import { usePathname, useRouter } from 'expo-router';
 import { api, errorMessage } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
+import { loginHref } from './StudentOnly';
 import type { Campaign, Redemption } from '@/lib/types';
 import { colors, fonts } from '@/theme';
 import { QRCode } from './QRCode';
@@ -15,6 +18,11 @@ export function CampaignCard({
   venueName?: string;
   onGetCode: () => void;
 }) {
+  const { access } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  // Misafir kampanyayı görür ama kodu alamaz; doğrulaması dolmuşsa yenilemeye yönlendirilir.
+  const locked = access !== 'student';
   return (
     <Box bg={colors.orangeSoft} style={{ marginBottom: 12 }}>
       <Small style={{ fontFamily: fonts.pixel, color: colors.ink, letterSpacing: 1 }}>KAMPANYA</Small>
@@ -25,7 +33,20 @@ export function CampaignCard({
       </P>
       {c.description ? <P style={{ fontSize: 14 }}>{c.description}</P> : null}
       <Small style={{ marginTop: 4 }}>Son gün: {new Date(c.ends_at).toLocaleDateString('tr-TR')}</Small>
-      <Button small variant="accent" title="KODU AL" onPress={onGetCode} style={{ marginTop: 10, alignSelf: 'flex-start' }} />
+      {locked ? (
+        <View style={{ marginTop: 10, gap: 6 }}>
+          <Button
+            small
+            variant="secondary"
+            title={access === 'expired' ? '🔒 KOD İÇİN DOĞRULAMANI YENİLE' : '🔒 KOD İÇİN GİRİŞ YAP'}
+            onPress={() => router.push(access === 'expired' ? '/dogrulama?mod=yenile' : loginHref(pathname))}
+            style={{ alignSelf: 'flex-start' }}
+          />
+          {access === 'guest' ? <Small>Kodlar sadece doğrulanmış öğrencilere verilir.</Small> : null}
+        </View>
+      ) : (
+        <Button small variant="accent" title="KODU AL" onPress={onGetCode} style={{ marginTop: 10, alignSelf: 'flex-start' }} />
+      )}
     </Box>
   );
 }
@@ -89,7 +110,7 @@ export function CampaignCodeModal({
                 </View>
                 <Text
                   selectable
-                  style={{ fontFamily: Platform.OS === 'web' ? 'ui-monospace, Menlo, Consolas, monospace' : 'monospace', fontWeight: '800', fontSize: 34, letterSpacing: 6, marginTop: 12, color: colors.ink }}
+                  style={{ fontFamily: Platform.select({ web: 'ui-monospace, Menlo, Consolas, monospace', ios: 'Menlo', default: 'monospace' }), fontWeight: '800', fontSize: 34, letterSpacing: 6, marginTop: 12, color: colors.ink }}
                 >
                   {red.code}
                 </Text>

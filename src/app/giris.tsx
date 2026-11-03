@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { api, AppError, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Hero } from '@/components/Brand';
-import { Banner, Box, Button, Field, H2, P, Row, Screen, Small } from '@/components/ui';
+import { Banner, Box, Button, Field, H2, P, Row, Small } from '@/components/ui';
+import { AuthLayout } from '@/components/AuthLayout';
 import { colors } from '@/theme';
 
 export default function Giris() {
   const router = useRouter();
-  const { refreshProfile } = useAuth();
+  const { sonra } = useLocalSearchParams<{ sonra?: string }>();
+  // Sadece uygulama içi adreslere dön ("//site.com" gibi dış adresleri reddet).
+  const back = typeof sonra === 'string' && /^\/(?!\/)[\w\-/?=&%.]*$/.test(sonra) ? sonra : '/';
+  const { refreshProfile, linkError, clearLinkError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -18,6 +22,7 @@ export default function Giris() {
 
   async function submit() {
     setError(null);
+    clearLinkError();
     setNotConfirmed(false);
     if (!email.trim() || !password) {
       setError('E-posta ve şifreni gir.');
@@ -27,7 +32,7 @@ export default function Giris() {
     try {
       await api.signIn(email, password);
       await refreshProfile();
-      router.replace('/');
+      router.replace(back as any);
     } catch (e) {
       setError(errorMessage(e));
       if (e instanceof AppError && e.code === 'NOT_CONFIRMED') setNotConfirmed(true);
@@ -37,12 +42,13 @@ export default function Giris() {
   }
 
   return (
-    <Screen>
+    <AuthLayout>
       <Hero />
       <Box>
         <H2 style={{ marginBottom: 4 }}>Giriş yap</H2>
         <Small style={{ marginBottom: 14 }}>Okulunun verdiği .edu.tr adresi ve şifrenle.</Small>
 
+        {linkError && !error ? <Banner kind="warn" text={linkError} /> : null}
         {error ? (
           <Banner kind="error" text={error}>
             {notConfirmed ? (
@@ -90,6 +96,10 @@ export default function Giris() {
         </Row>
       </Box>
 
+      <View style={{ marginTop: 16, alignItems: 'center' }}>
+        <Button small variant="secondary" title="Giriş yapmadan göz at →" onPress={() => router.replace('/kesfet')} />
+      </View>
+
       <View style={{ marginTop: 26, alignItems: 'center', gap: 6 }}>
         <Small>Tanıtım ekranları (taslak, örnek veri):</Small>
         <Row style={{ gap: 16 }}>
@@ -104,6 +114,6 @@ export default function Giris() {
           </Link>
         </Row>
       </View>
-    </Screen>
+    </AuthLayout>
   );
 }

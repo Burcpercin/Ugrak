@@ -5,7 +5,8 @@ import { api, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Logo } from '@/components/Brand';
 import { DemoInbox } from '@/components/DemoInbox';
-import { Banner, Box, Button, Field, H2, P, Row, Screen, Small } from '@/components/ui';
+import { Banner, Box, Button, Field, H2, P, Row, Small } from '@/components/ui';
+import { AuthLayout } from '@/components/AuthLayout';
 import { colors } from '@/theme';
 
 export default function Dogrulama() {
@@ -49,7 +50,7 @@ function KayitDogrulama({ email }: { email: string }) {
   }
 
   return (
-    <Screen>
+    <AuthLayout>
       <View style={{ marginBottom: 14 }}>
         <Logo size={28} />
       </View>
@@ -82,7 +83,7 @@ function KayitDogrulama({ email }: { email: string }) {
       <View style={{ marginTop: 18 }}>
         <DemoInbox email={email} kind="signup" />
       </View>
-    </Screen>
+    </AuthLayout>
   );
 }
 
@@ -110,7 +111,7 @@ function YillikDogrulama() {
     try {
       await api.requestReverify(email);
       setSent(true);
-      setMsg({ kind: 'ok', text: `${email} adresine 6 haneli kod gönderildi.` });
+      setMsg({ kind: 'ok', text: `${email} adresine yenileme linki ve 6 haneli kod gönderildi. Linke dokunabilir ya da kodu buraya yazabilirsin.` });
     } catch (e) {
       setMsg({ kind: 'error', text: errorMessage(e) });
     } finally {
@@ -134,18 +135,18 @@ function YillikDogrulama() {
 
   if (verified) {
     return (
-      <Screen>
+      <AuthLayout>
         <Box>
           <H2>Doğrulaman güncel</H2>
           <P style={{ marginVertical: 8 }}>Öğrenci doğrulaman hâlâ geçerli, bir şey yapmana gerek yok.</P>
           <Button title="Uygulamaya dön" onPress={() => router.replace('/')} />
         </Box>
-      </Screen>
+      </AuthLayout>
     );
   }
 
   return (
-    <Screen>
+    <AuthLayout>
       <View style={{ marginBottom: 14 }}>
         <Logo size={28} />
       </View>
@@ -203,7 +204,7 @@ function YillikDogrulama() {
       <View style={{ marginTop: 16, alignItems: 'center' }}>
         <Button small variant="secondary" title="Çıkış yap" onPress={() => api.signOut()} />
       </View>
-    </Screen>
+    </AuthLayout>
   );
 }
 

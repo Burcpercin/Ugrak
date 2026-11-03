@@ -22,7 +22,10 @@ const SECTIONS: { title: string; body: string[] }[] = [
       'Kullanıcı içeriği: mekanlara verilen puanlar, yorumlar, favoriler, pixel avatar tercihleri.',
       'İşlem güvenliği: şifrenin geri döndürülemez özeti (hash), oturum bilgileri, giriş zamanları.',
       'Kampanya kullanımı: alınan kampanya kodları, oluşturulma ve kullanım zamanı.',
-      'Uğrak; kimlik numarası, öğrenci belgesi, konum ya da özel nitelikli kişisel veri toplamaz.',
+      'Uğrak; kimlik numarası, öğrenci belgesi ya da özel nitelikli kişisel veri toplamaz.',
+      'Konum: izin verirsen konumun sadece cihazında, mekanlara uzaklığı hesaplamak için kullanılır. Sunucuya gönderilmez ve kaydedilmez; cihazda yalnızca "konumumu kullan" ya da seçtiğin kampüs tercihi saklanır. İzni istediğin zaman telefon ayarlarından geri alabilirsin.',
+      'Misafir kullanım: giriş yapmadan eklediğin favoriler ve oluşturduğun karakter sadece cihazında saklanır, sunucuya gönderilmez. Öğrenci hesabı açarsan favorilerin hesabına taşınır ve cihazdan silinir.',
+      'Mekan sahipleri kampanya kodunu kullanan öğrencinin kimliğini görmez; sadece kodun kullanıldığını ve zamanını görür.',
     ],
   },
   {
@@ -70,7 +73,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
 export default function Kvkk() {
   const router = useRouter();
   return (
-    <Screen>
+    <Screen maxWidth={780}>
       <Button
         small
         variant="secondary"

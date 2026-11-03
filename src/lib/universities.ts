@@ -1,4 +1,4 @@
-import type { University } from './types';
+import type { Campus, University } from './types';
 
 // supabase/schema.sql içindeki üniversite listesinin istemci tarafı kopyası.
 // Kayıt ekranında anında geri bildirim vermek için kullanılır;
@@ -18,6 +18,20 @@ export const UNIVERSITIES: University[] = [
   { id: 10, name: 'Galatasaray Üniversitesi', short_name: 'GSÜ', domains: ['gsu.edu.tr'], campus_name: 'Ortaköy Kampüsü', lat: 41.0466, lng: 29.0226 },
   { id: 11, name: 'Özyeğin Üniversitesi', short_name: 'Özyeğin', domains: ['ozyegin.edu.tr'], campus_name: 'Çekmeköy Kampüsü', lat: 41.0306, lng: 29.2589 },
   { id: 12, name: 'Koç Üniversitesi', short_name: 'Koç', domains: ['ku.edu.tr'], campus_name: 'Rumelifeneri Kampüsü', lat: 41.205, lng: 29.072 },
+];
+
+// Veritabanındaki kampüs listesinin yedeği (demo modunda ve sunucuya
+// ulaşılamazsa kullanılır). Ana kampüsler + birden fazla yerleşkesi olanlar.
+const EXTRA_CAMPUSES: Omit<Campus, 'id'>[] = [
+  { university_id: 1, name: 'Cevizlibağ Yerleşkesi', district: 'Zeytinburnu', lat: 41.0164, lng: 28.9147 },
+  { university_id: 2, name: 'Taşkışla Yerleşkesi', district: 'Beyoğlu', lat: 41.0385, lng: 28.9876 },
+  { university_id: 2, name: 'Maçka Yerleşkesi', district: 'Şişli', lat: 41.0439, lng: 28.9939 },
+  { university_id: 4, name: 'Yıldız Yerleşkesi', district: 'Beşiktaş', lat: 41.0494, lng: 29.0094 },
+];
+
+export const STATIC_CAMPUSES: Campus[] = [
+  ...UNIVERSITIES.map((u) => ({ id: u.id, university_id: u.id, name: u.campus_name, district: null, lat: u.lat, lng: u.lng })),
+  ...EXTRA_CAMPUSES.map((c, i) => ({ id: 100 + i, ...c })),
 ];
 
 export function universityForEmail(email: string): University | null {

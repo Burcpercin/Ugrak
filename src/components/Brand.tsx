@@ -4,6 +4,7 @@ import { colors, fonts } from '@/theme';
 import { Avatar } from './Avatar';
 import { Badge, Row } from './ui';
 import { isDemo } from '@/lib/api';
+import { useLayout } from '@/lib/useLayout';
 
 export function Logo({ size = 44 }: { size?: number }) {
   return (
@@ -14,6 +15,8 @@ export function Logo({ size = 44 }: { size?: number }) {
 }
 
 export function Hero() {
+  const { isWide } = useLayout();
+  if (isWide) return null; // geniş ekranda tanıtım paneli (AuthLayout) gösteriliyor
   return (
     <View style={{ alignItems: 'center', marginTop: 16, marginBottom: 20 }}>
       <Row style={{ gap: 10, marginBottom: 12, alignItems: 'flex-end' }}>
