@@ -553,7 +553,7 @@ revoke execute on function public.refresh_verification()   from anon;
 -- ---------------------------------------------------------------------
 
 insert into public.universities (id, name, short_name, domains, campus_name, lat, lng) values
-  (1,  'İstanbul Arel Üniversitesi',        'Arel',       array['istanbularel.edu.tr'],                      'Tepekent Yerleşkesi',  41.0627, 28.5937),
+  (1,  'İstanbul Arel Üniversitesi',        'Arel',       array['istanbularel.edu.tr'],               'Tepekent Yerleşkesi',  41.0627, 28.5937),
   (2,  'İstanbul Teknik Üniversitesi',      'İTÜ',        array['itu.edu.tr'],                       'Ayazağa Yerleşkesi',   41.1055, 29.0254),
   (3,  'Boğaziçi Üniversitesi',             'Boğaziçi',   array['bogazici.edu.tr', 'boun.edu.tr'],   'Güney Kampüs',         41.0839, 29.0510),
   (4,  'Yıldız Teknik Üniversitesi',        'YTÜ',        array['yildiz.edu.tr'],                    'Davutpaşa Kampüsü',    41.0256, 28.8897),
@@ -594,5 +594,5 @@ on conflict (id) do nothing;
 
 -- =====================================================================
 -- İlk admin hesabı (isteğe bağlı): kendi edu hesabınla kayıt olduktan sonra
---   update public.profiles set role = 'admin' where email = 'senin@arel.edu.tr';
+--   update public.profiles set role = 'admin' where email = 'senin@istanbularel.edu.tr';
 -- =====================================================================

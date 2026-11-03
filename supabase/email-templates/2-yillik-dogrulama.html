@@ -1,0 +1,80 @@
+<!--
+  Supabase → Authentication → Emails → "Magic Link" şablonu
+  Konu (Subject): Uğrak yıllık öğrenci doğrulaman
+  Bu dosyanın tamamını "Body" (Message) kutusuna yapıştır.
+  Uğrak bu şablonu sadece yıllık yeniden doğrulamada kullanır.
+  Değişkenler: {{ .Token }} 6 haneli kod, {{ .ConfirmationURL }} tek dokunuşla yenileme linki, {{ .Email }} adres
+  Öğrenci ister butona dokunur (uygulama açılır, doğrulama kendiliğinden yenilenir), ister kodu yazar.
+  Not: Authentication → Sign In / Providers → Email → "Email OTP Length" = 6 olmalı.
+-->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light only">
+<title>Uğrak yıllık öğrenci doğrulaman</title>
+</head>
+<body style="margin:0;padding:0;background:#FFF4DE;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Öğrenciliğini tek dokunuşla yenile ya da kodu yaz: {{ .Token }}. Bu isteği sen yapmadıysan bu e-postayı yok sayabilirsin.</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFF4DE;">
+<tr><td align="center" style="padding:32px 16px;">
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background:#FFFFFF;border:3px solid #1B1B1B;">
+
+    <!-- Başlık bandı -->
+    <tr><td style="background:#2F6FDE;border-bottom:3px solid #1B1B1B;padding:22px 28px;">
+      <span style="font-family:'Courier New',Courier,monospace;font-size:30px;font-weight:bold;letter-spacing:6px;color:#FFFBF2;">UĞR<span style="color:#F28C28;">A</span>K</span><br>
+      <span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#DCE8FF;">İstanbul’da öğrencinin uğrak yerleri</span>
+    </td></tr>
+
+    <!-- İçerik -->
+    <tr><td style="padding:28px 28px 6px 28px;font-family:Arial,Helvetica,sans-serif;color:#1B1B1B;">
+      <h1 style="margin:0 0 14px 0;font-size:22px;line-height:1.3;">Yıllık öğrenci doğrulaman</h1>
+      <p style="margin:0 0 14px 0;font-size:15px;line-height:1.55;">
+        Uğrak’ta öğrencilik her yıl yenileniyor. <strong>{{ .Email }}</strong> hesabın için yenileme istendi.
+        Yenilemek için butona dokun:
+      </p>
+    </td></tr>
+
+    <!-- Buton -->
+    <tr><td align="left" style="padding:4px 28px 18px 28px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="background:#F28C28;border:3px solid #1B1B1B;">
+          <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;font-family:'Courier New',Courier,monospace;font-size:17px;font-weight:bold;letter-spacing:1px;color:#1B1B1B;text-decoration:none;">ÖĞRENCİLİĞİMİ YENİLE</a>
+        </td>
+      </tr></table>
+    </td></tr>
+
+    <tr><td style="padding:0 28px 4px 28px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#1B1B1B;">
+      Ya da uygulamadaki kod kutusuna bu kodu yaz:
+    </td></tr>
+
+    <!-- Kod kutusu -->
+    <tr><td align="center" style="padding:6px 28px 24px 28px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background:#FFF4DE;border:3px solid #1B1B1B;">
+        <tr><td style="padding:16px 30px;font-family:'Courier New',Courier,monospace;font-size:34px;font-weight:bold;letter-spacing:10px;color:#1B1B1B;">{{ .Token }}</td></tr>
+      </table>
+      <p style="margin:10px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#5E564B;">Kod kısa bir süre geçerlidir ve tek kullanımlıktır.</p>
+    </td></tr>
+
+    <!-- Uyarı -->
+    <tr><td style="padding:0 28px 26px 28px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.55;color:#5E564B;">
+      <strong style="color:#1B1B1B;">Bu isteği sen yapmadıysan</strong> kodu kimseyle paylaşma ve bu e-postayı yok say.
+      Kodu ve linki yalnızca Uğrak'ta kullan; Uğrak ekibi kodunu asla sormaz.
+    </td></tr>
+
+    <!-- Alt bilgi -->
+    <tr><td style="background:#1B1B1B;padding:16px 28px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#BDB5A8;">
+      Bu otomatik bir e-postadır, yanıtlamana gerek yok.<br>
+      Uğrak senden asla şifre, kimlik numarası ya da ödeme bilgisi istemez.<br>
+      Uğrak · Üniversite ders projesi · İstanbul
+    </td></tr>
+
+  </table>
+
+</td></tr>
+</table>
+</body>
+</html>
