@@ -7,11 +7,13 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ugrak.app"
     },
     "android": {
+      "package": "com.ugrak.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#2F6FDE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -32,11 +34,27 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#2F6FDE"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Uğrak, yakınındaki mekanları sıralamak için konumunu kullanır. Konumun cihazında kalır, sunucuya gönderilmez."
+        }
+      ]
     ],
     "scheme": "ugrak",
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "description": "İstanbul’daki üniversite öğrencilerinin mekan puanlama ve kampanya uygulaması"
   }
 }
