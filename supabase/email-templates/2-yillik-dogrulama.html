@@ -3,9 +3,8 @@
   Konu (Subject): Uğrak yıllık öğrenci doğrulaman
   Bu dosyanın tamamını "Body" (Message) kutusuna yapıştır.
   Uğrak bu şablonu sadece yıllık yeniden doğrulamada kullanır.
-  Değişkenler: {{ .Token }} 6 haneli kod, {{ .ConfirmationURL }} tek dokunuşla yenileme linki, {{ .Email }} adres
+  Değişkenler: {{ .Token }} kod (6-10 hane; uygulama hepsini kabul eder), {{ .ConfirmationURL }} tek dokunuşla yenileme linki, {{ .Email }} adres
   Öğrenci ister butona dokunur (uygulama açılır, doğrulama kendiliğinden yenilenir), ister kodu yazar.
-  Not: Authentication → Sign In / Providers → Email → "Email OTP Length" = 6 olmalı.
 -->
 <!DOCTYPE html>
 <html lang="tr">

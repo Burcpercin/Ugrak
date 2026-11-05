@@ -1,0 +1,76 @@
+<!--
+  Supabase → Authentication → Emails → "Invite user" şablonu
+  Konu (Subject): Uğrak'a davet edildin
+  Uğrak bu maili kendisi göndermez (mekan sahipleri "Reset password" ile davet edilir).
+  Sadece Supabase panelinden "Invite user" kullanılırsa gider; markasız İngilizce mail gitmesin diye hazır.
+  Değişkenler: {{ .ConfirmationURL }} davet linki, {{ .Email }} adres
+-->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light only">
+<title>Uğrak'a davet edildin</title>
+</head>
+<body style="margin:0;padding:0;background:#FFF4DE;">
+<!-- Önizleme satırı (gelen kutusunda konu altında görünen metin) -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Uğrak ekibi seni davet etti. Hesabını açmak için linke dokun.</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFF4DE;">
+<tr><td align="center" style="padding:32px 16px;">
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background:#FFFFFF;border:3px solid #1B1B1B;">
+
+    <!-- Başlık bandı -->
+    <tr><td style="background:#2F6FDE;border-bottom:3px solid #1B1B1B;padding:22px 28px;">
+      <span style="font-family:'Courier New',Courier,monospace;font-size:30px;font-weight:bold;letter-spacing:6px;color:#FFFBF2;">UĞR<span style="color:#F28C28;">A</span>K</span><br>
+      <span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#DCE8FF;">İstanbul’da öğrencinin uğrak yerleri</span>
+    </td></tr>
+
+    <!-- İçerik -->
+    <tr><td style="padding:28px 28px 8px 28px;font-family:Arial,Helvetica,sans-serif;color:#1B1B1B;">
+      <h1 style="margin:0 0 14px 0;font-size:22px;line-height:1.3;">Uğrak'a davet edildin</h1>
+      <p style="margin:0 0 14px 0;font-size:15px;line-height:1.55;">Merhaba,</p>
+      <p style="margin:0 0 14px 0;font-size:15px;line-height:1.55;">Uğrak ekibi <strong>{{ .Email }}</strong> adresini Uğrak'a davet etti. Hesabını açmak için aşağıdaki butona dokun.</p>
+    </td></tr>
+
+    <!-- Buton -->
+    <tr><td align="left" style="padding:8px 28px 22px 28px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="background:#F28C28;border:3px solid #1B1B1B;">
+          <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;font-family:'Courier New',Courier,monospace;font-size:17px;font-weight:bold;letter-spacing:1px;color:#1B1B1B;text-decoration:none;">DAVETİ KABUL ET</a>
+        </td>
+      </tr></table>
+    </td></tr>
+
+    <!-- Bilgi kutusu -->
+    <tr><td style="padding:0 28px 22px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFF4DE;border:2px solid #1B1B1B;">
+        <tr><td style="padding:14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.55;color:#3E3830;">
+          <strong style="color:#1B1B1B;">Neden bu e-postayı aldın?</strong><br>
+          Uğrak ekibinden biri seni davet etti. Davet linki kısa süre geçerli ve tek kullanımlıktır.
+        </td></tr>
+      </table>
+    </td></tr>
+
+    <!-- Uyarı ve yedek link -->
+    <tr><td style="padding:0 28px 26px 28px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.55;color:#5E564B;">
+      <p style="margin:0 0 10px 0;"><strong style="color:#1B1B1B;">Bu daveti beklemiyorsan</strong> hiçbir şey yapmana gerek yok; bu e-postayı yok sayabilirsin.</p>
+      <p style="margin:0 0 6px 0;">Buton çalışmazsa şu adresi tarayıcına kopyala:</p>
+      <p style="margin:0;word-break:break-all;font-family:'Courier New',Courier,monospace;font-size:12px;color:#2F6FDE;">{{ .ConfirmationURL }}</p>
+    </td></tr>
+
+    <!-- Alt bilgi -->
+    <tr><td style="background:#1B1B1B;padding:16px 28px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#BDB5A8;">
+      Bu otomatik bir e-postadır, yanıtlamana gerek yok.<br>
+      Uğrak senden asla şifre, kimlik numarası ya da ödeme bilgisi istemez.<br>
+      Uğrak · Üniversite ders projesi · İstanbul
+    </td></tr>
+
+  </table>
+
+</td></tr>
+</table>
+</body>
+</html>
