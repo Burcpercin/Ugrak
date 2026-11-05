@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
-import { useLayout } from '@/lib/useLayout';
+import { column, useLayout } from '@/lib/useLayout';
 import { useVenues } from '@/lib/useVenues';
 import { useLocation } from '@/lib/location';
 import { distanceMeters } from '@/lib/universities';
@@ -166,7 +166,7 @@ export default function Kesfet() {
         </View>
 
         {/* Sağ: sonuçlar */}
-        <View style={{ flex: 1, width: isWide ? undefined : '100%', minWidth: 0 }}>
+        <View style={column(isWide, 1)}>
           {error ? <Banner kind="error" text={error} /> : null}
           {!venues ? <Loading /> : null}
 

@@ -17,3 +17,13 @@ export function useLayout() {
 }
 
 export const PAGE_WIDTH = 1180;
+
+/**
+ * Geniş ekranda yan yana sütun, dar ekranda tam genişlik.
+ * Not: dar ekranda (telefon) "flex" verilmez. Kaydırılan sayfanın içinde
+ * flex: 1 telefonda kutunun yüksekliğini sıfıra indirir; içerik üst üste biner
+ * ve sayfanın sonu kaydırılamaz. Webde bu sorun görünmez.
+ */
+export function column(isWide: boolean, flex = 1) {
+  return isWide ? { flex, minWidth: 0 } : { width: '100%' as const };
+}
