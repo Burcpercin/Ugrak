@@ -88,7 +88,8 @@ function KayitDogrulama({ email }: { email: string }) {
 }
 
 // ---------------------------------------------------------------------
-// 2) Yıllık yeniden doğrulama: okul adresine 6 haneli kod
+// 2) Yıllık yeniden doğrulama: okul adresine link + kod
+//    Kod uzunluğu Supabase ayarına göre 6-10 hane olabilir; ikisini de kabul ediyoruz.
 // ---------------------------------------------------------------------
 
 function YillikDogrulama() {
@@ -111,7 +112,7 @@ function YillikDogrulama() {
     try {
       await api.requestReverify(email);
       setSent(true);
-      setMsg({ kind: 'ok', text: `${email} adresine yenileme linki ve 6 haneli kod gönderildi. Linke dokunabilir ya da kodu buraya yazabilirsin.` });
+      setMsg({ kind: 'ok', text: `${email} adresine yenileme linki ve doğrulama kodu gönderildi. Linke dokunabilir ya da kodu buraya yazabilirsin.` });
     } catch (e) {
       setMsg({ kind: 'error', text: errorMessage(e) });
     } finally {
@@ -171,15 +172,15 @@ function YillikDogrulama() {
         ) : (
           <>
             <Field
-              label="6 haneli kod"
+              label="E-postadaki kod"
               placeholder="000000"
               value={code}
-              onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))}
+              onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 10))}
               keyboardType="number-pad"
               inputMode="numeric"
-              maxLength={6}
+              maxLength={10}
             />
-            <Button title="DOĞRULA" variant="success" onPress={() => confirm()} loading={busy} disabled={code.length !== 6} />
+            <Button title="DOĞRULA" variant="success" onPress={() => confirm()} loading={busy} disabled={code.length < 6} />
             <Button small variant="secondary" title="Kodu tekrar gönder" onPress={send} style={{ marginTop: 10 }} />
           </>
         )}
