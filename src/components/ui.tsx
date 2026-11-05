@@ -138,7 +138,9 @@ export function Box({
           s.box,
           { backgroundColor: bg },
           padded && { padding: 14 },
-          pressed && { transform: [{ translateX: 2 }, { translateY: 2 }] },
+          // transform her zaman tanımlı kalır: telefondaki yeni çizim motoru (Fabric)
+          // transform kaldırıldığında boş değerle çöküyor; sadece değeri değiştiriyoruz.
+          { transform: [{ translateX: pressed ? 2 : 0 }, { translateY: pressed ? 2 : 0 }] },
         ]}
       >
         {children}
@@ -203,7 +205,7 @@ export function Button({
               s.btn,
               small && s.btnSmall,
               { backgroundColor: c.bg },
-              pressed && !off && { transform: [{ translateX: 3 }, { translateY: 3 }] },
+              { transform: [{ translateX: pressed && !off ? 3 : 0 }, { translateY: pressed && !off ? 3 : 0 }] },
             ]}
           >
             {loading ? (

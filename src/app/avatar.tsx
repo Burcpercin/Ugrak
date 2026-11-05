@@ -177,7 +177,7 @@ function Swatches({ colors: list, value, onChange }: { colors: string[]; value: 
             backgroundColor: c,
             borderWidth: 3,
             borderColor: colors.ink,
-            transform: value === i ? [{ translateY: -3 }] : undefined,
+            transform: [{ translateY: value === i ? -3 : 0 }], // hep tanımlı (bkz. ui.tsx Box notu)
           }}
         >
           {value === i ? (
