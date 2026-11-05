@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { api, isDemo } from '@/lib/api';
 import { isNative } from '@/lib/useLayout';
 import { colors, fonts } from '@/theme';
 import { Logo } from './Brand';
@@ -16,6 +17,7 @@ export function PanelShell({
   nav,
   active,
   onNav,
+  header,
   children,
 }: {
   title: string;
@@ -23,12 +25,18 @@ export function PanelShell({
   nav: NavItem[];
   active: string;
   onNav: (k: string) => void;
+  /** Kenar çubuğunda rol etiketinin altında (ör. mekan seçici) */
+  header?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const wide = width >= 860;
+  const signOut = async () => {
+    await api.signOut();
+    router.replace('/giris');
+  };
 
   const navList = nav.map((n) => {
     const on = n.key === active;
@@ -53,12 +61,15 @@ export function PanelShell({
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Taslak şeridi */}
-      <View style={{ backgroundColor: colors.yellow, borderBottomWidth: 3, borderColor: colors.ink, paddingTop: 6 + (isNative ? insets.top : 0), paddingBottom: 6, paddingHorizontal: 16 }}>
-        <Text style={{ fontFamily: fonts.pixel, fontSize: 13, color: colors.ink, textAlign: 'center' }}>
-          TASLAK EKRAN · ÖRNEK (MOCK) VERİ · Sunumda fikri göstermek içindir, veritabanına bağlı değildir
-        </Text>
-      </View>
+      {isDemo ? (
+        <View style={{ backgroundColor: colors.yellow, borderBottomWidth: 3, borderColor: colors.ink, paddingTop: 6 + (isNative ? insets.top : 0), paddingBottom: 6, paddingHorizontal: 16 }}>
+          <Text style={{ fontFamily: fonts.pixel, fontSize: 13, color: colors.ink, textAlign: 'center' }}>
+            DEMO MODU · Veriler bu cihazda tutulur, mailler demo gelen kutusuna düşer
+          </Text>
+        </View>
+      ) : isNative ? (
+        <View style={{ height: insets.top, backgroundColor: colors.ink }} />
+      ) : null}
 
       <View style={{ flex: 1, flexDirection: wide ? 'row' : 'column' }}>
         <View
@@ -76,11 +87,18 @@ export function PanelShell({
               <Text style={{ fontFamily: fonts.pixel, color: colors.orange, marginTop: 6, fontSize: 14 }}>{roleLabel}</Text>
             </View>
             {!wide ? (
-              <Pressable onPress={() => router.replace('/giris')}>
-                <Small style={{ color: '#fff' }}>Çıkış →</Small>
-              </Pressable>
+              // Dar ekranda (telefon) kenar menüsü yok: uygulamaya dönüş ve çıkış burada.
+              <View style={{ alignItems: 'flex-end', gap: 10 }}>
+                <Pressable onPress={() => router.replace('/kesfet')} accessibilityRole="link" hitSlop={8}>
+                  <Small style={{ color: '#fff' }}>← Uygulama</Small>
+                </Pressable>
+                <Pressable onPress={signOut} accessibilityRole="button" hitSlop={8}>
+                  <Small style={{ color: '#bbb' }}>Çıkış</Small>
+                </Pressable>
+              </View>
             ) : null}
           </Row>
+          {header ? <View style={{ marginBottom: wide ? 16 : 10 }}>{header}</View> : null}
           {wide ? (
             <View>{navList}</View>
           ) : (
@@ -89,9 +107,14 @@ export function PanelShell({
             </ScrollView>
           )}
           {wide ? (
-            <Pressable onPress={() => router.replace('/giris')} style={{ marginTop: 24 }}>
-              <Small style={{ color: '#bbb' }}>← Uygulamaya dön</Small>
-            </Pressable>
+            <View style={{ marginTop: 24, gap: 10 }}>
+              <Pressable onPress={() => router.replace('/kesfet')} accessibilityRole="link">
+                <Small style={{ color: '#bbb' }}>← Uygulamaya dön</Small>
+              </Pressable>
+              <Pressable onPress={signOut} accessibilityRole="button">
+                <Small style={{ color: '#bbb' }}>Çıkış yap</Small>
+              </Pressable>
+            </View>
           ) : null}
         </View>
 
@@ -110,7 +133,7 @@ export function PanelShell({
 
 export function Kpi({ label, value, note, bg = colors.card }: { label: string; value: string; note?: string; bg?: string }) {
   return (
-    <Box bg={bg} style={{ flexGrow: 1, flexBasis: 180, marginBottom: 12 }}>
+    <Box bg={bg} style={{ flexGrow: 1, flexBasis: 150, minWidth: 140, marginBottom: 12 }}>
       <Small style={{ fontFamily: fonts.pixel, color: colors.ink }}>{label}</Small>
       <Text style={{ fontWeight: '900', fontSize: 32, color: colors.ink, marginTop: 4 }}>{value}</Text>
       {note ? <Small>{note}</Small> : null}

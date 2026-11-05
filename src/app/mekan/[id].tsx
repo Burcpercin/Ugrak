@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth';
 import type { Campaign, Scores, VenueDetail } from '@/lib/types';
 import { distanceMeters, formatDistance } from '@/lib/universities';
 import { useLocation } from '@/lib/location';
-import { useLayout } from '@/lib/useLayout';
+import { column, useLayout } from '@/lib/useLayout';
 import { OpenToGuests } from '@/components/RequireStudent';
 import { StudentOnly } from '@/components/StudentOnly';
 import { loadFavorites, toggleFavorite } from '@/lib/favorites';
@@ -16,6 +16,7 @@ import { CampaignCard, CampaignCodeModal } from '@/components/CampaignCode';
 import { ReviewForm } from '@/components/ReviewForm';
 import { priceText } from '@/components/VenueCard';
 import { Badge, Banner, Box, Button, H1, H2, H3, Loading, P, Row, ScoreBar, ScoreTile, Small } from '@/components/ui';
+import { ConfirmButton } from '@/components/PanelKit';
 import { CATEGORY_LABEL, CRITERIA, colors, fonts } from '@/theme';
 
 export default function MekanPage() {
@@ -31,7 +32,7 @@ export default function MekanPage() {
 function MekanDetay() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { access } = useAuth();
+  const { access, isAdmin } = useAuth();
   const { origin } = useLocation();
   const guest = access === 'guest';
   const { isWide } = useLayout();
@@ -40,6 +41,8 @@ function MekanDetay() {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [modMsg, setModMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const [hiding, setHiding] = useState<string | null>(null);
   const [codeFor, setCodeFor] = useState<Campaign | null>(null);
 
   const load = useCallback(async () => {
@@ -141,12 +144,11 @@ function MekanDetay() {
   // ----- Sol sütun: bilgi, puanlar, yorumlar -----
   const left = (
     <View style={{ gap: 20 }}>
-      <Row style={{ gap: 20, alignItems: 'stretch', flexWrap: isWide ? 'nowrap' : 'wrap' }}>
+      <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 20, alignItems: 'stretch' }}>
         <View
           style={{
-            flex: 1,
-            minWidth: 220,
-            minHeight: 180,
+            ...column(isWide, 1),
+            minHeight: isWide ? 180 : 120,
             borderWidth: 3,
             borderColor: colors.ink,
             backgroundColor: colors.grey,
@@ -158,8 +160,8 @@ function MekanDetay() {
           <Small>[ mekan fotoğrafı — V2 ]</Small>
           {v.description ? <P style={{ marginTop: 10, fontSize: 14, textAlign: 'center' }}>{v.description}</P> : null}
         </View>
-        <View style={{ flex: 1.2, minWidth: 260 }}>
-          <Box style={{ height: '100%' }}>
+        <View style={column(isWide, 1.2)}>
+          <Box style={isWide ? { height: '100%' } : undefined}>
             <Row style={{ gap: 14, marginBottom: 12 }}>
               <ScoreTile value={stats.avg_overall} size={64} />
               <View style={{ flex: 1 }}>
@@ -172,10 +174,11 @@ function MekanDetay() {
             ))}
           </Box>
         </View>
-      </Row>
+      </View>
 
       <View>
         <H2 style={{ marginBottom: 12 }}>Yorumlar ({reviews.length})</H2>
+        {modMsg ? <Banner kind={modMsg.kind} text={modMsg.text} /> : null}
         {reviews.length === 0 ? <Small>Henüz yorum yok.</Small> : null}
         {reviews.map((r) => {
           const avg = (r.price + r.study + r.portion + r.vibe) / 4;
@@ -199,6 +202,33 @@ function MekanDetay() {
                     ))}
                   </Row>
                   {r.comment ? <P style={{ marginTop: 8, fontSize: 14 }}>{r.comment}</P> : null}
+                  {isAdmin && !isMine ? (
+                    // Admin denetimi: yorumu bulunduğu yerden gizler. Yetkiyi veritabanı ayrıca kontrol eder.
+                    <View style={{ marginTop: 10, alignSelf: 'flex-start' }}>
+                      <ConfirmButton
+                        title="Gizle"
+                        confirmTitle="GİZLENSİN Mİ?"
+                        variant="secondary"
+                        loading={hiding === r.id}
+                        onConfirm={async () => {
+                          setHiding(r.id);
+                          setModMsg(null);
+                          try {
+                            await api.adminSetReviewHidden(r.id, true);
+                            await load();
+                            setModMsg({
+                              kind: 'ok',
+                              text: `${r.display_name} adlı öğrencinin yorumu gizlendi; puan ortalamasından da çıkarıldı. Geri açmak için: Admin paneli → Yorumlar → Gizlenenler.`,
+                            });
+                          } catch (e) {
+                            setModMsg({ kind: 'error', text: errorMessage(e) });
+                          } finally {
+                            setHiding(null);
+                          }
+                        }}
+                      />
+                    </View>
+                  ) : null}
                 </View>
               </Row>
             </Box>
@@ -238,8 +268,8 @@ function MekanDetay() {
     <>
       {header}
       <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 28, alignItems: 'flex-start' }}>
-        <View style={{ flex: 1.6, width: isWide ? undefined : '100%', minWidth: 0 }}>{isWide ? left : right}</View>
-        <View style={{ flex: 1, width: isWide ? undefined : '100%', minWidth: 0 }}>{isWide ? right : left}</View>
+        <View style={column(isWide, 1.6)}>{isWide ? left : right}</View>
+        <View style={column(isWide, 1)}>{isWide ? right : left}</View>
       </View>
       <CampaignCodeModal campaign={codeFor} venueName={v.name} onClose={() => setCodeFor(null)} />
     </>

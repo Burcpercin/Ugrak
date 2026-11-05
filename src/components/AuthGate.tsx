@@ -16,7 +16,7 @@ import { Banner, Box, Button, H2, Loading, P, Screen } from './ui';
  * Hepsi tamamsa children'ı gösterir (verilmediyse Keşfet'e yönlendirir).
  */
 export function AuthGate({ children, allowGuest = false }: { children?: React.ReactNode; allowGuest?: boolean }) {
-  const { ready, session, profile, access, profileError, refreshProfile } = useAuth();
+  const { ready, session, profile, access, profileError, refreshProfile, recovery } = useAuth();
   const [busy, setBusy] = useState(false);
 
   if (!ready || (session && !profile && !profileError)) {
@@ -53,7 +53,15 @@ export function AuthGate({ children, allowGuest = false }: { children?: React.Re
     );
   }
 
+  // Şifre belirleme linkiyle gelindiyse önce yeni şifre
+  if (session && recovery) return <Redirect href="/sifre" />;
+
   if (!session) return allowGuest ? <>{children ?? <Redirect href="/kesfet" />}</> : <Redirect href="/giris" />;
+  // Mekan sahibi: gezinme ekranlarına girebilir; ana sayfası panel.
+  if (access === 'owner') {
+    if (!allowGuest || !children) return <Redirect href="/panel" />;
+    return <>{children}</>;
+  }
   if (access === 'pending') {
     return <Redirect href={`/dogrulama?mod=kayit&email=${encodeURIComponent(profile?.email ?? session.email)}`} />;
   }

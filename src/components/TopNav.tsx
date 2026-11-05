@@ -119,7 +119,9 @@ export function TopNav() {
               <Text style={{ fontSize: 12, color: colors.muted }}>
                 {access === 'guest'
                   ? 'Giriş yap / kayıt ol'
-                  : `${uni?.short_name ?? ''} · ${access === 'student' ? 'Öğrenci' : 'Doğrulama gerekli'}`}
+                  : access === 'owner'
+                    ? 'Mekan hesabı'
+                    : `${uni?.short_name ?? ''} · ${access === 'student' ? 'Öğrenci' : 'Doğrulama gerekli'}`}
               </Text>
             </View>
           ) : null}

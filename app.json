@@ -49,6 +49,13 @@
         {
           "locationWhenInUsePermission": "Uğrak, yakınındaki mekanları sıralamak için konumunu kullanır. Konumun cihazında kalır, sunucuya gönderilmez."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Uğrak, mekan panelinde öğrencinin kampanya QR kodunu okutmak için kamerayı kullanır. Görüntü kaydedilmez.",
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "scheme": "ugrak",

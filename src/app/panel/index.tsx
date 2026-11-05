@@ -1,265 +1,602 @@
-import React, { useState } from 'react';
-import { Text, View } from 'react-native';
-import { Kpi, PanelShell, SectionTitle, Table, V2Note } from '@/components/PanelShell';
-import { Badge, Banner, Box, Button, Field, P, Row, ScoreBar, Small } from '@/components/ui';
-import { CRITERIA, colors, fonts } from '@/theme';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Text, TextInput, View } from 'react-native';
+import { api, errorMessage } from '@/lib/api';
+import { isNative } from '@/lib/useLayout';
+import { DURATIONS, MAX_CAMPAIGN_DAYS, MAX_LIVE_CAMPAIGNS, REDEEM_TEXT, normalizeCode, validateCampaign } from '@/lib/rules';
+import type { Campaign, OwnerDashboard, OwnerVenue, RedeemResult } from '@/lib/types';
+import { Kpi, PanelShell, SectionTitle, Table } from '@/components/PanelShell';
+import { ConfirmButton, Pill, fmtDate, fmtDateTime } from '@/components/PanelKit';
+import { QrScanner } from '@/components/QrScanner';
+import { RequireRole } from '@/components/RequireRole';
+import { Avatar } from '@/components/Avatar';
+import { priceText } from '@/components/VenueCard';
+import { Badge, Banner, Box, Button, Field, H3, Loading, P, Row, ScoreBar, Small } from '@/components/ui';
+import { CATEGORY_LABEL, CRITERIA, colors, fonts } from '@/theme';
 
 // =====================================================================
-// MEKAN PANELİ — TASLAK
-// Mekan sahibinin kullanacağı web paneli. V1'de tüm veriler örnektir (mock).
-// V2'de Supabase'e bağlanacak: campaigns tablosu, redeem_code() fonksiyonu
-// ve venue_stats görünümü bu ekranların veri kaynağıdır.
+// MEKAN PANELİ
+// Mekan sahibinin kod doğruladığı, kampanya yönettiği ve puanlarını
+// gördüğü ekran. Veriler: my_venues(), venue_stats, campaigns,
+// venue_redemptions (öğrenci kimliği yok), review_feed, redeem_code().
+// Yetki kontrolü veritabanında; bu ekran sadece sahibin kendi mekanını gösterir.
 // =====================================================================
 
 const NAV = [
+  { key: 'kod', label: 'Kod doğrula' },
   { key: 'ozet', label: 'Özet' },
   { key: 'kampanya', label: 'Kampanyalar' },
-  { key: 'kod', label: 'Kod doğrula' },
   { key: 'yorum', label: 'Yorumlar' },
   { key: 'bilgi', label: 'Mekan bilgileri' },
 ];
 
-type MockCampaign = { id: string; title: string; discount: string; ends: string; used: number; active: boolean };
+const DAY = 24 * 3600 * 1000;
 
-const INITIAL_CAMPAIGNS: MockCampaign[] = [
-  { id: 'c1', title: 'Sınav Haftası Çayı', discount: 'Sınırsız çay 30₺', ends: '31.12.2026', used: 86, active: true },
-  { id: 'c2', title: 'Sabah Simit + Çay', discount: '%20 indirim', ends: '15.11.2026', used: 42, active: true },
-  { id: 'c3', title: 'Yaz Okulu Menüsü', discount: '%15 indirim', ends: '31.08.2026', used: 131, active: false },
-];
-
-const WEEK = [
-  { d: 'Pzt', n: 14 },
-  { d: 'Sal', n: 22 },
-  { d: 'Çar', n: 19 },
-  { d: 'Per', n: 27 },
-  { d: 'Cum', n: 31 },
-  { d: 'Cmt', n: 9 },
-  { d: 'Paz', n: 6 },
-];
-
-const RECENT = [
-  { code: 'K7MQ2X', campaign: 'Sınav Haftası Çayı', time: 'Bugün 14:32', ok: true },
-  { code: 'P3ZT9A', campaign: 'Sabah Simit + Çay', time: 'Bugün 09:05', ok: true },
-  { code: 'H8WR4N', campaign: 'Sınav Haftası Çayı', time: 'Dün 18:47', ok: true },
-  { code: 'B2LC6E', campaign: 'Sınav Haftası Çayı', time: 'Dün 16:10', ok: false },
-];
-
-const MOCK_REVIEWS = [
-  { name: 'Ece', uni: 'Arel', avg: 4.3, text: 'Arka masada priz var, finallerde buradaydım. Çay ucuz.', date: '19.10.2026' },
-  { name: 'Kaan', uni: 'Arel', avg: 3.8, text: 'Wifi bazen kopuyor ama fiyat iyi.', date: '13.10.2026' },
-  { name: 'Selin', uni: 'Arel', avg: 4.5, text: 'Sessiz köşe tam ders çalışmalık.', date: '02.10.2026' },
-];
-
-const VALID_CODES: Record<string, string> = { AB12CD: 'Sınav Haftası Çayı', XY34ZW: 'Sabah Simit + Çay' };
-
-export default function MekanPaneli() {
-  const [tab, setTab] = useState('ozet');
+export default function MekanPaneliPage() {
   return (
-    <PanelShell title={NAV.find((n) => n.key === tab)!.label} roleLabel="Mekan paneli · Tepe Çay Ocağı" nav={NAV} active={tab} onNav={setTab}>
-      {tab === 'ozet' && <Ozet />}
-      {tab === 'kampanya' && <Kampanyalar />}
-      {tab === 'kod' && <KodDogrula />}
-      {tab === 'yorum' && <Yorumlar />}
-      {tab === 'bilgi' && <Bilgiler />}
+    <RequireRole role="venue_owner">
+      <MekanPaneli />
+    </RequireRole>
+  );
+}
+
+function MekanPaneli() {
+  // Telefonda en sık iş kod doğrulamak; webde özet.
+  const [tab, setTab] = useState(isNative ? 'kod' : 'ozet');
+  const [venues, setVenues] = useState<OwnerVenue[] | null>(null);
+  const [venueId, setVenueId] = useState<string | null>(null);
+  const [data, setData] = useState<OwnerDashboard | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .myVenues()
+      .then((list) => {
+        setVenues(list);
+        setVenueId((cur) => cur ?? (list.find((v) => v.is_active) ?? list[0])?.id ?? null);
+      })
+      .catch((e) => setError(errorMessage(e)));
+  }, []);
+
+  const reload = useCallback(async () => {
+    if (!venueId) return;
+    try {
+      setData(await api.ownerDashboard(venueId));
+      setError(null);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }, [venueId]);
+
+  useEffect(() => {
+    setData(null);
+    reload();
+  }, [reload]);
+
+  const venue = venues?.find((v) => v.id === venueId) ?? null;
+
+  const header =
+    venues && venues.length > 1 ? (
+      <View>
+        <Small style={{ color: '#bbb', marginBottom: 6 }}>Mekan seç</Small>
+        <Row style={{ flexWrap: 'wrap' }}>
+          {venues.map((v) => (
+            <Pill key={v.id} label={v.name + (v.is_active ? '' : ' (kapalı)')} active={v.id === venueId} onPress={() => setVenueId(v.id)} />
+          ))}
+        </Row>
+      </View>
+    ) : null;
+
+  let body: React.ReactNode;
+  if (error && !data) {
+    body = (
+      <>
+        <Banner kind="error" text={error} />
+        <Button small variant="secondary" title="Tekrar dene" onPress={reload} style={{ alignSelf: 'flex-start' }} />
+      </>
+    );
+  } else if (venues && venues.length === 0) {
+    body = (
+      <Box>
+        <H3 style={{ marginBottom: 6 }}>Hesabına bağlı mekan yok</H3>
+        <P style={{ fontSize: 14 }}>
+          Mekanın Uğrak ekibi tarafından hesabına bağlandığında burada görünür. Bir sorun olduğunu düşünüyorsan ekiple
+          iletişime geç.
+        </P>
+      </Box>
+    );
+  } else if (!data || !venue) {
+    body = <Loading />;
+  } else {
+    body = (
+      <>
+        {!venue.is_active ? (
+          <Banner
+            kind="warn"
+            title="MEKAN ŞU AN KAPALI"
+            text="Mekanın öğrencilere görünmüyor; yeni kampanya açılamaz ve kodlar kabul edilmez. Ekiple iletişime geç."
+          />
+        ) : null}
+        {error ? <Banner kind="error" text={error} /> : null}
+        {tab === 'kod' && <KodDogrula onDone={reload} />}
+        {tab === 'ozet' && <Ozet d={data} />}
+        {tab === 'kampanya' && <Kampanyalar d={data} reload={reload} />}
+        {tab === 'yorum' && <Yorumlar d={data} />}
+        {tab === 'bilgi' && <Bilgiler v={data.venue} />}
+      </>
+    );
+  }
+
+  return (
+    <PanelShell
+      title={NAV.find((n) => n.key === tab)!.label}
+      roleLabel={venue ? `Mekan paneli · ${venue.name}` : 'Mekan paneli'}
+      nav={NAV}
+      active={tab}
+      onNav={setTab}
+      header={header}
+    >
+      {body}
     </PanelShell>
   );
 }
 
-function Ozet() {
-  const max = Math.max(...WEEK.map((w) => w.n));
+// ---------------------------------------------------------------------
+// Kod doğrulama
+// ---------------------------------------------------------------------
+
+function KodDogrula({ onDone }: { onDone: () => void }) {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<RedeemResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [scan, setScan] = useState(false);
+  const [history, setHistory] = useState<{ at: string; r: RedeemResult }[]>([]);
+
+  async function verify(raw: string) {
+    if (busy) return; // çift dokunuşta iki kez gönderme
+    setError(null);
+    setResult(null);
+    const clean = normalizeCode(raw);
+    if (!clean) {
+      setResult({ ok: false, reason: 'FORMAT', campaign_title: null, used_at: null });
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await api.redeemCode(clean);
+      setResult(r);
+      setHistory((h) => [{ at: new Date().toISOString(), r }, ...h].slice(0, 8));
+      if (r.ok) {
+        setCode('');
+        onDone();
+      }
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const t = result ? REDEEM_TEXT[result.reason] : null;
+
+  return (
+    <>
+      <Box>
+        <P style={{ fontSize: 14, marginBottom: 10 }}>
+          Öğrencinin uygulamada gösterdiği 6 haneli kodu yaz{isNative ? ' ya da QR kodunu okut' : ''}. Kod 10 dakika geçerli
+          ve tek kullanımlıktır.
+        </P>
+        <TextInput
+          value={code}
+          onChangeText={(v) => setCode(v.toUpperCase().replace(/[^A-Z0-9:]/g, '').slice(0, 12))}
+          placeholder="K7MQ2X"
+          placeholderTextColor="#B5AC9E"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          autoComplete="off"
+          maxLength={12}
+          onSubmitEditing={() => verify(code)}
+          accessibilityLabel="Kampanya kodu"
+          style={{
+            borderWidth: 3,
+            borderColor: colors.ink,
+            backgroundColor: colors.card,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            fontSize: 30,
+            letterSpacing: 8,
+            fontWeight: '800',
+            color: colors.ink,
+            textAlign: 'center',
+            marginBottom: 12,
+          }}
+        />
+        <Row style={{ gap: 10, flexWrap: 'wrap' }}>
+          <Button title="DOĞRULA" variant="success" onPress={() => verify(code)} loading={busy} disabled={!code} style={{ flexGrow: 1 }} />
+          {isNative ? <Button title="📷 QR OKUT" variant="primary" onPress={() => setScan(true)} style={{ flexGrow: 1 }} /> : null}
+        </Row>
+      </Box>
+
+      {error ? <Banner kind="error" text={error} /> : null}
+
+      {result && t ? (
+        <Box bg={result.ok ? colors.greenSoft : colors.redSoft} style={{ marginTop: 14 }}>
+          <Text style={{ fontFamily: fonts.pixel, fontSize: 24, color: result.ok ? colors.green : colors.red }}>
+            {result.ok ? '✓ ' : '✕ '}
+            {t.title}
+          </Text>
+          {result.campaign_title ? <P style={{ fontWeight: '700', marginTop: 6 }}>{result.campaign_title}</P> : null}
+          <P style={{ fontSize: 14, marginTop: 4 }}>{t.text}</P>
+          {result.reason === 'USED' && result.used_at ? <Small style={{ marginTop: 4 }}>Kullanıldığı an: {fmtDateTime(result.used_at)}</Small> : null}
+        </Box>
+      ) : null}
+
+      {history.length ? (
+        <>
+          <SectionTitle>Bu oturumda doğrulananlar</SectionTitle>
+          {history.map((h, i) => (
+            <Row key={i} style={{ gap: 10, marginBottom: 6 }}>
+              <Badge text={h.r.ok ? 'ONAY' : 'RED'} bg={h.r.ok ? colors.greenSoft : colors.redSoft} />
+              <Small style={{ color: colors.ink, flex: 1 }}>
+                {fmtDateTime(h.at)} · {h.r.campaign_title ?? REDEEM_TEXT[h.r.reason].title.toLocaleLowerCase('tr')}
+              </Small>
+            </Row>
+          ))}
+        </>
+      ) : null}
+
+      <Small style={{ marginTop: 14 }}>
+        KVKK: Kodu kullanan öğrencinin kimliğini görmezsin; sadece kodun geçerli olup olmadığını görürsün.
+      </Small>
+
+      {isNative ? (
+        <QrScanner
+          visible={scan}
+          onClose={() => setScan(false)}
+          onCode={(c) => {
+            setCode(c);
+            verify(c);
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Özet
+// ---------------------------------------------------------------------
+
+function Ozet({ d }: { d: OwnerDashboard }) {
+  const now = Date.now();
+  const used = d.redemptions.filter((r) => r.used_at);
+  const startToday = new Date();
+  startToday.setHours(0, 0, 0, 0);
+  const today = used.filter((r) => new Date(r.used_at!).getTime() >= startToday.getTime()).length;
+  const live = d.campaigns.filter((c) => c.is_active && new Date(c.ends_at).getTime() > now && new Date(c.starts_at).getTime() <= now);
+
+  // Son 7 gün (bugün dahil), yerel saate göre
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const start = new Date(startToday.getTime() - (6 - i) * DAY);
+    const end = start.getTime() + DAY;
+    return {
+      label: start.toLocaleDateString('tr-TR', { weekday: 'short' }),
+      n: used.filter((r) => {
+        const t = new Date(r.used_at!).getTime();
+        return t >= start.getTime() && t < end;
+      }).length,
+    };
+  });
+  const max = Math.max(1, ...days.map((x) => x.n));
+  const week = days.reduce((a, x) => a + x.n, 0);
+
   return (
     <>
       <Row style={{ flexWrap: 'wrap', gap: 12 }}>
-        <Kpi label="Bu hafta kullanılan kod" value="128" note="geçen haftaya göre +18%" bg={colors.orangeSoft} />
-        <Kpi label="Aktif kampanya" value="2" />
-        <Kpi label="Öğrenci puanı" value="4.3" note="24 doğrulanmış yorum" bg={colors.greenSoft} />
-        <Kpi label="Favoriye ekleyen" value="57" />
+        <Kpi label="Bugün kullanılan kod" value={String(today)} bg={colors.orangeSoft} />
+        <Kpi label="Son 7 gün" value={String(week)} note={`son 30 gün: ${used.length}`} />
+        <Kpi label="Yürürlükteki kampanya" value={`${live.length}/${MAX_LIVE_CAMPAIGNS}`} />
+        <Kpi
+          label="Öğrenci puanı"
+          value={d.stats.avg_overall != null ? d.stats.avg_overall.toFixed(1) : '—'}
+          note={`${d.stats.review_count} doğrulanmış yorum`}
+          bg={colors.greenSoft}
+        />
+        <Kpi label="Favoriye ekleyen" value={String(d.favorites)} />
       </Row>
 
       <SectionTitle>Son 7 gün · kullanılan kampanya kodu</SectionTitle>
       <Box>
         <Row style={{ alignItems: 'flex-end', height: 170, gap: 10 }}>
-          {WEEK.map((w) => (
-            <View key={w.d} style={{ flex: 1, alignItems: 'center' }}>
+          {days.map((w, i) => (
+            <View key={i} style={{ flex: 1, alignItems: 'center' }}>
               <Text style={{ fontWeight: '800', fontSize: 13, marginBottom: 4, color: colors.ink }}>{w.n}</Text>
-              <View style={{ width: '70%', height: (w.n / max) * 120, backgroundColor: colors.blue, borderWidth: 3, borderColor: colors.ink }} />
-              <Small style={{ marginTop: 6 }}>{w.d}</Small>
+              <View style={{ width: '70%', height: Math.max(4, (w.n / max) * 120), backgroundColor: w.n ? colors.blue : colors.grey, borderWidth: 3, borderColor: colors.ink }} />
+              <Small style={{ marginTop: 6 }}>{w.label}</Small>
             </View>
           ))}
         </Row>
       </Box>
 
-      <SectionTitle>Son kod kullanımları</SectionTitle>
-      <Table
-        columns={[
-          { key: 'code', label: 'Kod', width: 120 },
-          { key: 'campaign', label: 'Kampanya', width: 240 },
-          { key: 'time', label: 'Zaman', width: 160 },
-          { key: 'status', label: 'Durum', width: 160 },
-        ]}
-        rows={RECENT.map((r) => ({
-          code: r.code,
-          campaign: r.campaign,
-          time: r.time,
-          status: r.ok ? <Badge text="KULLANILDI" bg={colors.greenSoft} /> : <Badge text="SÜRESİ DOLDU" bg={colors.redSoft} />,
-        }))}
-      />
-      <Small style={{ marginTop: 8 }}>Mekan, kodu kullanan öğrencinin kimliğini görmez; sadece kodun geçerliliğini görür (KVKK).</Small>
+      <SectionTitle>Son kod hareketleri</SectionTitle>
+      {d.redemptions.length === 0 ? (
+        <Small>Son 30 günde kod alınmadı. Bir kampanya açınca öğrenciler kod almaya başlar.</Small>
+      ) : (
+        <Table
+          columns={[
+            { key: 'campaign', label: 'Kampanya', width: 230 },
+            { key: 'created', label: 'Kod alındı', width: 140 },
+            { key: 'used', label: 'Kullanıldı', width: 140 },
+            { key: 'status', label: 'Durum', width: 150 },
+          ]}
+          rows={d.redemptions.slice(0, 15).map((r) => {
+            const expired = !r.used_at && new Date(r.expires_at).getTime() < now;
+            return {
+              campaign: r.campaign_title,
+              created: fmtDateTime(r.created_at),
+              used: fmtDateTime(r.used_at),
+              status: r.used_at ? (
+                <Badge text="KULLANILDI" bg={colors.greenSoft} />
+              ) : expired ? (
+                <Badge text="SÜRESİ DOLDU" bg={colors.grey} />
+              ) : (
+                <Badge text="BEKLİYOR" bg={colors.orangeSoft} />
+              ),
+            };
+          })}
+        />
+      )}
+      <Small style={{ marginTop: 8 }}>Mekan, kodu alan öğrencinin kimliğini görmez (KVKK).</Small>
     </>
   );
 }
 
-function Kampanyalar() {
-  const [list, setList] = useState(INITIAL_CAMPAIGNS);
+// ---------------------------------------------------------------------
+// Kampanyalar
+// ---------------------------------------------------------------------
+
+type CState = 'live' | 'planned' | 'stopped' | 'ended';
+function stateOf(c: Campaign, now: number): CState {
+  if (new Date(c.ends_at).getTime() <= now) return 'ended';
+  if (!c.is_active) return 'stopped';
+  if (new Date(c.starts_at).getTime() > now) return 'planned';
+  return 'live';
+}
+const STATE_LABEL: Record<CState, { text: string; bg: string }> = {
+  live: { text: 'YÜRÜRLÜKTE', bg: colors.greenSoft },
+  planned: { text: 'PLANLANDI', bg: colors.blueSoft },
+  stopped: { text: 'DURDURULDU', bg: colors.orangeSoft },
+  ended: { text: 'BİTTİ', bg: colors.grey },
+};
+
+function Kampanyalar({ d, reload }: { d: OwnerDashboard; reload: () => Promise<void> }) {
   const [title, setTitle] = useState('');
   const [discount, setDiscount] = useState('');
-  const [ends, setEnds] = useState('');
-  const [msg, setMsg] = useState<string | null>(null);
+  const [desc, setDesc] = useState('');
+  const [startTomorrow, setStartTomorrow] = useState(false);
+  const [days, setDays] = useState(7);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const [touched, setTouched] = useState(false);
+
+  const now = Date.now();
+  const liveCount = d.campaigns.filter((c) => c.is_active && new Date(c.ends_at).getTime() > now).length;
+  const full = liveCount >= MAX_LIVE_CAMPAIGNS;
+
+  const input = useMemo(() => {
+    const start = startTomorrow
+      ? (() => {
+          const t = new Date();
+          t.setDate(t.getDate() + 1);
+          t.setHours(9, 0, 0, 0); // yarın 09:00 (yerel saat)
+          return t;
+        })()
+      : new Date();
+    return {
+      title,
+      discount_text: discount,
+      description: desc || null,
+      starts_at: start.toISOString(),
+      ends_at: new Date(start.getTime() + days * DAY).toISOString(),
+    };
+  }, [title, discount, desc, startTomorrow, days]);
+  const problem = validateCampaign(input);
+
+  const stats = useMemo(() => {
+    const m = new Map<string, { issued: number; used: number }>();
+    for (const r of d.redemptions) {
+      const x = m.get(r.campaign_id) ?? { issued: 0, used: 0 };
+      x.issued++;
+      if (r.used_at) x.used++;
+      m.set(r.campaign_id, x);
+    }
+    return m;
+  }, [d.redemptions]);
+
+  async function create() {
+    setTouched(true);
+    setMsg(null);
+    if (problem || full || !d.venue.is_active) return;
+    setBusy('new');
+    try {
+      await api.createCampaign(d.venue.id, input);
+      setTitle('');
+      setDiscount('');
+      setDesc('');
+      setTouched(false);
+      setMsg({ kind: 'ok', text: startTomorrow ? 'Kampanya yarın 09:00’da başlayacak.' : 'Kampanya yayında; öğrenciler şimdi görüyor.' });
+      await reload();
+    } catch (e) {
+      setMsg({ kind: 'error', text: errorMessage(e) });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function act(c: Campaign, patch: { is_active?: boolean; ends_at?: string }, ok: string) {
+    setMsg(null);
+    setBusy(c.id);
+    try {
+      await api.updateCampaign(c.id, patch);
+      setMsg({ kind: 'ok', text: ok });
+      await reload();
+    } catch (e) {
+      setMsg({ kind: 'error', text: errorMessage(e) });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const order: CState[] = ['live', 'planned', 'stopped', 'ended'];
+  const sorted = [...d.campaigns].sort((a, b) => order.indexOf(stateOf(a, now)) - order.indexOf(stateOf(b, now)));
 
   return (
     <>
-      <Table
-        columns={[
-          { key: 'title', label: 'Kampanya', width: 230 },
-          { key: 'discount', label: 'İndirim', width: 170 },
-          { key: 'ends', label: 'Bitiş', width: 120 },
-          { key: 'used', label: 'Kullanım', width: 100 },
-          { key: 'status', label: 'Durum', width: 170 },
-        ]}
-        rows={list.map((c) => ({
-          title: c.title,
-          discount: c.discount,
-          ends: c.ends,
-          used: String(c.used),
-          status: (
-            <Row style={{ gap: 8 }}>
-              <Badge text={c.active ? 'AKTİF' : 'PASİF'} bg={c.active ? colors.greenSoft : colors.grey} />
-              <Text
-                onPress={() => setList((l) => l.map((x) => (x.id === c.id ? { ...x, active: !x.active } : x)))}
-                style={{ color: colors.blue, fontWeight: '700', fontSize: 13 }}
-              >
-                {c.active ? 'Durdur' : 'Başlat'}
-              </Text>
+      {msg ? <Banner kind={msg.kind} text={msg.text} /> : null}
+
+      <Box bg={colors.orangeSoft}>
+        <H3 style={{ marginBottom: 8 }}>Yeni kampanya</H3>
+        {!d.venue.is_active ? (
+          <P style={{ fontSize: 14 }}>Mekan kapalıyken kampanya açılamaz.</P>
+        ) : full ? (
+          <P style={{ fontSize: 14 }}>
+            Aynı anda en fazla {MAX_LIVE_CAMPAIGNS} kampanya yürürlükte olabilir. Yenisini açmak için aşağıdan birini durdur.
+          </P>
+        ) : (
+          <>
+            <Field label="Başlık" placeholder="ör. Sınav Haftası Çayı" value={title} onChangeText={setTitle} maxLength={60} />
+            <Field label="İndirim" placeholder="ör. %20 indirim · 1 alana 1 bedava" value={discount} onChangeText={setDiscount} maxLength={40} />
+            <Field label="Açıklama (isteğe bağlı)" placeholder="Koşullar: hangi ürünlerde, hangi saatlerde…" value={desc} onChangeText={setDesc} maxLength={200} multiline />
+            <Small style={{ fontFamily: fonts.pixel, color: colors.ink, marginBottom: 6 }}>BAŞLANGIÇ</Small>
+            <Row style={{ flexWrap: 'wrap' }}>
+              <Pill label="Hemen" active={!startTomorrow} onPress={() => setStartTomorrow(false)} />
+              <Pill label="Yarın 09:00" active={startTomorrow} onPress={() => setStartTomorrow(true)} />
             </Row>
-          ),
-        }))}
-      />
+            <Small style={{ fontFamily: fonts.pixel, color: colors.ink, marginBottom: 6, marginTop: 4 }}>SÜRE</Small>
+            <Row style={{ flexWrap: 'wrap' }}>
+              {DURATIONS.map((x) => (
+                <Pill key={x.days} label={x.label} active={days === x.days} onPress={() => setDays(x.days)} />
+              ))}
+            </Row>
+            <Small style={{ marginBottom: 10 }}>Bitiş: {fmtDateTime(input.ends_at)}</Small>
+            {touched && problem ? <Banner kind="error" text={problem} /> : null}
+            <Button title="YAYINLA" variant="accent" onPress={create} loading={busy === 'new'} />
+            <Small style={{ marginTop: 8 }}>
+              Başladıktan sonra başlık ve indirim değiştirilemez (kodu alan öğrenci yanıltılmasın); durdurup yenisini açabilirsin.
+            </Small>
+          </>
+        )}
+      </Box>
 
-      <SectionTitle>Yeni kampanya</SectionTitle>
-      <Box bg={colors.paper}>
-        {msg ? <Banner kind="ok" text={msg} /> : null}
-        <Row style={{ flexWrap: 'wrap', gap: 12 }}>
-          <View style={{ flexGrow: 1, flexBasis: 220 }}>
-            <Field label="Başlık" placeholder="ör. Final Haftası Kahvesi" value={title} onChangeText={setTitle} />
+      <SectionTitle>Kampanyalarım</SectionTitle>
+      {sorted.length === 0 ? <Small>Henüz kampanya yok.</Small> : null}
+      {sorted.map((c) => {
+        const st = stateOf(c, now);
+        const s = stats.get(c.id) ?? { issued: 0, used: 0 };
+        const maxEnd = new Date(c.starts_at).getTime() + MAX_CAMPAIGN_DAYS * DAY;
+        const extended = Math.min(new Date(c.ends_at).getTime() + 7 * DAY, maxEnd);
+        const canExtend = st !== 'ended' && extended > new Date(c.ends_at).getTime();
+        return (
+          <Box key={c.id} style={{ marginBottom: 12 }} bg={st === 'ended' ? colors.paper : colors.card}>
+            <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+              <View style={{ flex: 1, minWidth: 200 }}>
+                <Row style={{ gap: 8, flexWrap: 'wrap' }}>
+                  <H3>{c.title}</H3>
+                  <Badge text={STATE_LABEL[st].text} bg={STATE_LABEL[st].bg} />
+                </Row>
+                <P style={{ fontSize: 15, fontWeight: '700', marginTop: 2 }}>{c.discount_text}</P>
+                {c.description ? <Small style={{ color: colors.ink }}>{c.description}</Small> : null}
+                <Small style={{ marginTop: 4 }}>
+                  {fmtDate(c.starts_at)} – {fmtDate(c.ends_at)} · son 30 günde {s.issued} kod alındı, {s.used} kullanıldı
+                </Small>
+              </View>
+              <View style={{ gap: 6, alignItems: 'flex-start' }}>
+                {st === 'live' || st === 'planned' ? (
+                  <ConfirmButton title="Durdur" confirmTitle="DURDURULSUN MU?" variant="secondary" loading={busy === c.id} onConfirm={() => act(c, { is_active: false }, 'Kampanya durduruldu; öğrenciler artık görmüyor.')} />
+                ) : null}
+                {st === 'stopped' ? (
+                  <Button small variant="secondary" title="Yeniden başlat" loading={busy === c.id} disabled={full} onPress={() => act(c, { is_active: true }, 'Kampanya yeniden yayında.')} />
+                ) : null}
+                {canExtend ? (
+                  <Button small variant="secondary" title="+7 gün uzat" loading={busy === c.id} onPress={() => act(c, { ends_at: new Date(extended).toISOString() }, `Bitiş ${fmtDate(new Date(extended).toISOString())} oldu.`)} />
+                ) : null}
+              </View>
+            </Row>
+          </Box>
+        );
+      })}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Yorumlar ve bilgiler
+// ---------------------------------------------------------------------
+
+function Yorumlar({ d }: { d: OwnerDashboard }) {
+  return (
+    <>
+      <Box>
+        <Row style={{ gap: 14, marginBottom: 10 }}>
+          <View style={{ borderWidth: 3, borderColor: colors.ink, backgroundColor: colors.orange, paddingHorizontal: 12, paddingVertical: 8 }}>
+            <Text style={{ fontFamily: fonts.pixel, fontSize: 26, color: colors.ink }}>
+              {d.stats.avg_overall != null ? d.stats.avg_overall.toFixed(1) : '—'}
+            </Text>
           </View>
-          <View style={{ flexGrow: 1, flexBasis: 160 }}>
-            <Field label="İndirim" placeholder="ör. %20 indirim" value={discount} onChangeText={setDiscount} />
-          </View>
-          <View style={{ flexGrow: 1, flexBasis: 140 }}>
-            <Field label="Bitiş tarihi" placeholder="GG.AA.YYYY" value={ends} onChangeText={setEnds} />
-          </View>
+          <Small style={{ flex: 1 }}>{d.stats.review_count} doğrulanmış öğrenci puanı</Small>
         </Row>
-        <Button
-          title="KAMPANYAYI YAYINLA"
-          variant="accent"
-          style={{ alignSelf: 'flex-start' }}
-          onPress={() => {
-            if (!title.trim() || !discount.trim()) {
-              setMsg(null);
-              return;
-            }
-            setList((l) => [{ id: String(Date.now()), title, discount, ends: ends || '—', used: 0, active: true }, ...l]);
-            setTitle('');
-            setDiscount('');
-            setEnds('');
-            setMsg('Kampanya listeye eklendi (taslak — kaydedilmez).');
-          }}
-        />
-        <V2Note text="Yayınlanan kampanya favoriye ekleyen öğrencilere bildirim olarak gidecek" />
-      </Box>
-    </>
-  );
-}
-
-function KodDogrula() {
-  const [code, setCode] = useState('');
-  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
-  return (
-    <>
-      <Box bg={colors.paper} style={{ maxWidth: 520 }}>
-        <P style={{ marginBottom: 12 }}>
-          Öğrencinin ekranındaki 6 haneli kodu gir. Kod tek kullanımlıktır ve 10 dakika geçerlidir. Kasada öğrenci kimlik
-          kartını da kontrol et.
-        </P>
-        <Field
-          label="Kampanya kodu"
-          placeholder="AB12CD"
-          value={code}
-          onChangeText={(t) => setCode(t.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
-          autoCapitalize="characters"
-          style={{ fontWeight: '800', fontSize: 24, letterSpacing: 6 }}
-        />
-        <Button
-          title="DOĞRULA"
-          variant="success"
-          onPress={() => {
-            const c = VALID_CODES[code];
-            setResult(
-              c
-                ? { ok: true, text: `Geçerli kod ✓ · ${c}. Kod kullanıldı olarak işaretlendi.` }
-                : { ok: false, text: 'Kod bulunamadı, süresi dolmuş ya da daha önce kullanılmış.' },
-            );
-          }}
-        />
-        {result ? (
-          <View style={{ marginTop: 14 }}>
-            <Banner kind={result.ok ? 'ok' : 'error'} text={result.text} />
-          </View>
-        ) : null}
-        <Small style={{ marginTop: 6 }}>Taslakta denemek için: AB12CD veya XY34ZW</Small>
-      </Box>
-      <V2Note text="Telefon kamerasıyla QR okutma (expo-camera) ve redeem_code() fonksiyonuna bağlanma" />
-    </>
-  );
-}
-
-function Yorumlar() {
-  const avgs = { price: 4.6, study: 4.4, portion: 3.1, vibe: 3.9 };
-  return (
-    <>
-      <Box style={{ maxWidth: 560 }}>
         {CRITERIA.map((c) => (
-          <ScoreBar key={c.key} label={c.label} value={avgs[c.key]} />
+          <ScoreBar key={c.key} label={c.label} value={(d.stats as any)[`avg_${c.key}`]} />
         ))}
-        <Small style={{ marginTop: 6 }}>En zayıf kriter: Porsiyon. Öğrenciler bu konuda öneri bırakıyor.</Small>
       </Box>
       <SectionTitle>Son yorumlar</SectionTitle>
-      {MOCK_REVIEWS.map((r) => (
-        <Box key={r.name} style={{ marginBottom: 12 }}>
-          <Row style={{ gap: 8, flexWrap: 'wrap' }}>
-            <Text style={{ fontFamily: fonts.pixel, fontSize: 16, color: colors.ink }}>{r.name}</Text>
-            <Badge text={`ÖĞRENCİ · ${r.uni}`} bg={colors.blueSoft} />
-            <Badge text={`ORT. ${r.avg}`} bg={colors.greenSoft} />
-            <Small>{r.date}</Small>
+      {d.reviews.length === 0 ? <Small>Henüz yorum yok.</Small> : null}
+      {d.reviews.map((r) => (
+        <Box key={r.id} style={{ marginBottom: 10 }}>
+          <Row style={{ gap: 10, alignItems: 'flex-start' }}>
+            <Avatar config={r.avatar} size={36} framed />
+            <View style={{ flex: 1 }}>
+              <Row style={{ gap: 6, flexWrap: 'wrap' }}>
+                <H3 style={{ fontSize: 15 }}>{r.display_name}</H3>
+                <Badge text={`ÖĞRENCİ${r.university_short ? ' · ' + r.university_short : ''}`} bg={colors.blueSoft} />
+              </Row>
+              <Small>
+                {fmtDate(r.updated_at)} · Fiyat {r.price} · Ders {r.study} · Porsiyon {r.portion} · Ortam {r.vibe}
+              </Small>
+              {r.comment ? <P style={{ fontSize: 14, marginTop: 6 }}>{r.comment}</P> : null}
+            </View>
           </Row>
-          <P style={{ marginTop: 6, fontSize: 14 }}>{r.text}</P>
         </Box>
       ))}
-      <V2Note text="Mekanın yorumlara yanıt verebilmesi ve uygunsuz yorumu şikayet etmesi" />
+      <Small>Uygunsuz bir yorum görürsen Uğrak ekibine bildir; ekip yorumu inceleyip gizleyebilir.</Small>
     </>
   );
 }
 
-function Bilgiler() {
+function Bilgiler({ v }: { v: OwnerVenue }) {
+  const rows: [string, string][] = [
+    ['Ad', v.name],
+    ['Kategori', CATEGORY_LABEL[v.category] ?? v.category],
+    ['Fiyat seviyesi', priceText(v.price_level)],
+    ['Semt', v.district],
+    ['Adres', v.address ?? '—'],
+    ['Açıklama', v.description ?? '—'],
+    ['Konum', `${v.lat.toFixed(5)}, ${v.lng.toFixed(5)}`],
+    ['Durum', v.is_active ? 'Açık (öğrencilere görünüyor)' : 'Kapalı'],
+  ];
   return (
-    <Box bg={colors.paper} style={{ maxWidth: 620 }}>
-      <Field label="Mekan adı" value="Tepe Çay Ocağı" editable={false} />
-      <Field label="Kategori" value="Kafe" editable={false} />
-      <Field label="Adres" value="Tepekent Mah., Büyükçekmece" editable={false} />
-      <Field label="Fiyat seviyesi" value="₺ (uygun)" editable={false} />
-      <Field label="Yakın kampüs" value="İstanbul Arel Üniversitesi — Tepekent" editable={false} />
-      <Small>Mekan bilgileri hesap açılırken Uğrak ekibi tarafından girilir; değişiklik talepleri ekibe iletilir.</Small>
-      <V2Note text="Fotoğraf yükleme ve çalışma saatleri" />
-    </Box>
+    <>
+      <Box>
+        {rows.map(([k, val]) => (
+          <Row key={k} style={{ paddingVertical: 8, borderBottomWidth: 1, borderColor: '#e2dacb', gap: 12, alignItems: 'flex-start' }}>
+            <Small style={{ width: 120, fontFamily: fonts.pixel, color: colors.ink }}>{k}</Small>
+            <P style={{ fontSize: 14, flex: 1 }}>{val}</P>
+          </Row>
+        ))}
+      </Box>
+      <Small style={{ marginTop: 10 }}>
+        Bilgilerde değişiklik için Uğrak ekibiyle iletişime geç; öğrencilerin doğru mekanı bulması için değişiklikleri ekip yapar.
+      </Small>
+    </>
   );
 }

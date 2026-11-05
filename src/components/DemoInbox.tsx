@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { demoTools, type DemoMail, isDemo } from '@/lib/api';
 import { colors } from '@/theme';
 import { Banner, Button, H3, P, Row, Small } from './ui';
@@ -16,11 +17,12 @@ export function DemoInbox({
   onUseCode,
 }: {
   email: string;
-  kind: 'signup' | 'otp';
+  kind: 'signup' | 'otp' | 'reset';
   onOpened?: () => void;
   onUseCode?: (code: string) => void;
 }) {
   const [mails, setMails] = useState<DemoMail[]>([]);
+  const router = useRouter();
 
   const load = useCallback(async () => {
     const all = await demoTools.inbox(email);
@@ -41,7 +43,7 @@ export function DemoInbox({
   return (
     <Banner kind="demo" title="DEMO GELEN KUTUSU">
       <Small style={{ color: colors.ink, marginBottom: 8 }}>
-        Gerçek sistemde bu mail {email || 'öğrencinin okul adresine'} gider. Sunum için burada gösteriliyor.
+        Gerçek sistemde bu mail {email || 'kişinin e-posta adresine'} gider. Sunum için burada gösteriliyor.
       </Small>
       {mails.length === 0 ? (
         <P style={{ fontSize: 14 }}>Henüz mail yok.</P>
@@ -50,7 +52,26 @@ export function DemoInbox({
           <View key={m.id} style={{ borderWidth: 2, borderColor: colors.ink, backgroundColor: '#fff', padding: 10 }}>
             <Small>Kimden: no-reply@ugrak.app → {m.to}</Small>
             <H3 style={{ fontSize: 15, marginVertical: 4 }}>{m.subject}</H3>
-            {m.kind === 'signup' ? (
+            {m.kind === 'reset' ? (
+              <>
+                <P style={{ fontSize: 14, marginBottom: 8 }}>
+                  Uğrak hesabın için şifre belirleme isteği geldi. Şifreni belirlemek için aşağıdaki linke dokun. Bu isteği
+                  sen yapmadıysan maili yok say.
+                </P>
+                <Button
+                  small
+                  variant="success"
+                  title={m.opened ? 'Link kullanıldı ✓' : 'Şifremi belirle'}
+                  disabled={m.opened}
+                  onPress={async () => {
+                    await demoTools.openResetLink(m.id);
+                    onOpened?.();
+                    // Gerçek sistemde link uygulamayı ana adresten açar; oradan şifre ekranına gidilir.
+                    router.replace('/sifre');
+                  }}
+                />
+              </>
+            ) : m.kind === 'signup' ? (
               <>
                 <P style={{ fontSize: 14, marginBottom: 8 }}>
                   Merhaba! Uğrak’a kaydını tamamlamak için aşağıdaki linke tıkla. Bu adım okul mailinin sana ait

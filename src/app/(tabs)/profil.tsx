@@ -5,7 +5,7 @@ import { api, demoTools, errorMessage, isDemo } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { AvatarConfig, ReviewItem, VenueListItem } from '@/lib/types';
 import { universityById } from '@/lib/universities';
-import { useLayout } from '@/lib/useLayout';
+import { column, useLayout } from '@/lib/useLayout';
 import { useVenues } from '@/lib/useVenues';
 import { Avatar } from '@/components/Avatar';
 import { StudentPage } from '@/components/StudentPage';
@@ -14,16 +14,16 @@ import { colors } from '@/theme';
 
 export default function Profil() {
   const router = useRouter();
-  const { profile, daysLeft, refreshProfile, access, avatar } = useAuth();
+  const { profile, daysLeft, refreshProfile, access, avatar, isAdmin } = useAuth();
   const { isWide } = useLayout();
   const { venues, favorites } = useVenues();
-  const [reviews, setReviews] = useState<(ReviewItem & { venue_name: string })[]>([]);
+  const [reviews, setReviews] = useState<(ReviewItem & { venue_name: string; is_hidden?: boolean })[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const uni = universityById(profile?.university_id);
 
   useFocusEffect(
     useCallback(() => {
-      if (access === 'guest') return;
+      if (access === 'guest' || access === 'owner') return;
       api.myReviews().then(setReviews).catch(() => setReviews([]));
     }, [access]),
   );
@@ -38,6 +38,14 @@ export default function Profil() {
     );
   }
   if (!profile) return null;
+
+  if (access === 'owner') {
+    return (
+      <StudentPage hasTabBar>
+        <OwnerProfile name={profile.display_name} email={profile.email} />
+      </StudentPage>
+    );
+  }
 
   const until = profile.verified_at
     ? new Date(new Date(profile.verified_at).getTime() + 365 * 24 * 3600 * 1000).toLocaleDateString('tr-TR')
@@ -84,12 +92,21 @@ export default function Profil() {
         />
       </Box>
 
+      {isAdmin ? (
+        <Box bg={colors.blueSoft}>
+          <H3 style={{ marginBottom: 6 }}>Admin</H3>
+          <Button small title="ADMİN PANELİ" onPress={() => router.push('/admin')} style={{ alignSelf: 'flex-start' }} />
+        </Box>
+      ) : null}
+
       <Box bg={colors.paper}>
         <H3 style={{ marginBottom: 6 }}>Hesap</H3>
         <Pressable onPress={() => router.push('/kvkk')}>
           <P style={{ color: colors.blue, fontWeight: '700' }}>KVKK Aydınlatma Metni</P>
         </Pressable>
-        <Small style={{ marginTop: 4 }}>Verilerinin silinmesini talep etme özelliği V2’de eklenecek.</Small>
+        <Pressable onPress={() => router.push('/hesap-sil')} style={{ marginTop: 6 }}>
+          <P style={{ color: colors.red, fontWeight: '700' }}>Hesabımı ve verilerimi sil</P>
+        </Pressable>
         <Button
           small
           variant="danger"
@@ -184,6 +201,11 @@ export default function Profil() {
                     </H3>
                     <Small>{new Date(r.updated_at).toLocaleDateString('tr-TR')}</Small>
                   </Row>
+                  {r.is_hidden ? (
+                    <Small style={{ color: colors.red, marginTop: 2 }}>
+                      Bu yorum kurallara uymadığı için Uğrak ekibi tarafından gizlendi; başkaları görmüyor.
+                    </Small>
+                  ) : null}
                   <Small numberOfLines={2} style={{ color: colors.ink, marginTop: 2 }}>
                     {r.comment || 'Yorum yazılmamış, sadece puan.'}
                   </Small>
@@ -203,7 +225,7 @@ export default function Profil() {
     <StudentPage hasTabBar>
       <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 28, alignItems: 'flex-start' }}>
         <View style={{ width: isWide ? 320 : '100%' }}>{left}</View>
-        <View style={{ flex: 1, width: isWide ? undefined : '100%', minWidth: 0 }}>{right}</View>
+        <View style={column(isWide, 1)}>{right}</View>
       </View>
     </StudentPage>
   );
@@ -252,7 +274,7 @@ function GuestProfile({ avatar, favVenues }: { avatar: AvatarConfig | null; favV
         </Box>
       </View>
 
-      <View style={{ flex: 1, width: isWide ? undefined : '100%', minWidth: 0 }}>
+      <View style={column(isWide, 1)}>
         <H2 style={{ marginBottom: 10 }}>Favorilerim ({favVenues.length})</H2>
         {favVenues.length === 0 ? (
           <Small>Mekan kartlarındaki ♡ ile favori ekleyebilirsin.</Small>
@@ -273,6 +295,42 @@ function GuestProfile({ avatar, favVenues }: { avatar: AvatarConfig | null; favV
           ))
         )}
       </View>
+    </View>
+  );
+}
+
+/** Mekan sahibinin profil sekmesi: hesabı ve panele geçiş. */
+function OwnerProfile({ name, email }: { name: string; email: string }) {
+  const router = useRouter();
+  return (
+    <View style={{ gap: 18, maxWidth: 520 }}>
+      <Box>
+        <H2>{name}</H2>
+        <Small numberOfLines={1}>{email}</Small>
+        <View style={{ marginTop: 8 }}>
+          <Badge text="MEKAN HESABI" bg={colors.greenSoft} />
+        </View>
+        <Button title="MEKAN PANELİ" onPress={() => router.push('/panel')} style={{ marginTop: 14 }} />
+      </Box>
+      <Box bg={colors.paper}>
+        <H3 style={{ marginBottom: 6 }}>Hesap</H3>
+        <Pressable onPress={() => router.push('/kvkk')}>
+          <P style={{ color: colors.blue, fontWeight: '700' }}>KVKK Aydınlatma Metni</P>
+        </Pressable>
+        <Small style={{ marginTop: 4 }}>
+          Mekan hesabını kapatmak ya da mekan bilgilerini değiştirmek için Uğrak ekibiyle iletişime geç.
+        </Small>
+        <Button
+          small
+          variant="danger"
+          title="Çıkış yap"
+          onPress={async () => {
+            await api.signOut();
+            router.replace('/kesfet');
+          }}
+          style={{ marginTop: 12, alignSelf: 'flex-start' }}
+        />
+      </Box>
     </View>
   );
 }

@@ -33,7 +33,9 @@ export function CampaignCard({
       </P>
       {c.description ? <P style={{ fontSize: 14 }}>{c.description}</P> : null}
       <Small style={{ marginTop: 4 }}>Son gün: {new Date(c.ends_at).toLocaleDateString('tr-TR')}</Small>
-      {locked ? (
+      {access === 'owner' ? (
+        <Small style={{ marginTop: 10 }}>Kodlar sadece doğrulanmış öğrencilere verilir.</Small>
+      ) : locked ? (
         <View style={{ marginTop: 10, gap: 6 }}>
           <Button
             small

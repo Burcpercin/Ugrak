@@ -3,7 +3,25 @@ import { AppState, Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { Api, Profile, Redemption, ReviewItem, Scores, SessionInfo, VenueListItem, VenueStats } from '../types';
+import type {
+  AdminCampus,
+  AdminReview,
+  AdminVenue,
+  Api,
+  Application,
+  InviteResult,
+  OwnerVenue,
+  Profile,
+  Redemption,
+  RedeemResult,
+  ReviewItem,
+  Scores,
+  SessionInfo,
+  VenueListItem,
+  VenueRedemption,
+  VenueStats,
+} from '../types';
+import { normalizeCode, validateCampaign, validateVenue } from '../rules';
 import { STATIC_CAMPUSES, checkStudentEmail } from '../universities';
 import { AppError } from './errors';
 
@@ -36,8 +54,17 @@ function mapDbError(e: { message?: string } | null): never {
   const m = msg.match(/UGRAK_[A-Z_]+:\s*(.*)$/);
   if (m) throw new AppError('DB', m[1]);
   if (/row-level security/i.test(msg)) {
-    throw new AppError('VERIFY', 'Bu işlem için öğrenci doğrulaman güncel olmalı.');
+    throw new AppError('VERIFY', 'Bu işlem için yetkin yok ya da öğrenci doğrulaman güncel değil.');
   }
+  if (/permission denied/i.test(msg)) throw new AppError('FORBIDDEN', 'Bu işlem için yetkin yok.');
+  if (/venue_applications_len/.test(msg)) {
+    throw new AppError('DB', 'Başvuru bilgileri çok kısa ya da çok uzun. Alanları kontrol et.');
+  }
+  if (/venues_fields/.test(msg)) {
+    throw new AppError('DB', 'Mekan bilgileri geçersiz: ad 2-80, semt 2-40 karakter ve konum İstanbul içinde olmalı.');
+  }
+  if (/campaigns_fields/.test(msg)) throw new AppError('DB', 'Kampanya başlığı ya da indirim metni geçersiz.');
+  if (/failed to fetch|network/i.test(msg)) throw new AppError('NETWORK', 'Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.');
   throw new AppError('DB', msg || 'Veritabanı hatası.');
 }
 
@@ -122,6 +149,25 @@ export function createSupabaseApi(url: string, key: string): Api {
         : undefined
       : Linking.createURL('/');
 
+  /** Sunucu fonksiyonunu (Edge Function) çağır; hata mesajını Türkçe olarak çıkar. */
+  async function callFn<T>(name: string, body: Record<string, unknown>): Promise<T> {
+    const { data, error } = await sb.functions.invoke(name, { body });
+    if (error) {
+      let msg = '';
+      try {
+        const ctx = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') msg = (await ctx.json())?.error ?? '';
+      } catch {
+        // gövde okunamadı
+      }
+      if (!msg && /not found|404/i.test(error.message)) {
+        msg = `Sunucu fonksiyonu "${name}" kurulmamış. README → Supabase kurulumu → Edge Functions.`;
+      }
+      throw new AppError('FN', msg || 'Sunucuya ulaşılamadı. Biraz sonra tekrar dene.');
+    }
+    return data as T;
+  }
+
   const toSession = (s: any): SessionInfo => (s?.user ? { userId: s.user.id, email: s.user.email ?? '' } : null);
 
   return {
@@ -133,7 +179,7 @@ export function createSupabaseApi(url: string, key: string): Api {
     },
 
     onAuthChange(cb) {
-      const { data } = sb.auth.onAuthStateChange((_ev, session) => cb(toSession(session)));
+      const { data } = sb.auth.onAuthStateChange((ev, session) => cb(toSession(session), ev));
       return () => data.subscription.unsubscribe();
     },
 
@@ -173,14 +219,39 @@ export function createSupabaseApi(url: string, key: string): Api {
           refresh_token: params.refresh_token,
         });
         if (error) mapAuthError(error);
-        return true;
+        return params.type === 'recovery' ? 'recovery' : 'session';
       }
       if (params.code) {
         const { error } = await sb.auth.exchangeCodeForSession(params.code);
         if (error) mapAuthError(error);
-        return true;
+        return params.type === 'recovery' ? 'recovery' : 'session';
       }
       return false;
+    },
+
+    async requestPasswordReset(email) {
+      const mail = email.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) throw new AppError('EMAIL', 'Geçerli bir e-posta adresi gir.');
+      // Supabase, adresin kayıtlı olup olmadığını söylemez (hesap avcılığına karşı).
+      const { error } = await sb.auth.resetPasswordForEmail(mail, { redirectTo: redirectUrl() });
+      if (error) mapAuthError(error);
+    },
+
+    async updatePassword(password) {
+      if (password.length < 8) throw new AppError('PASSWORD', 'Şifre en az 8 karakter olmalı.');
+      const { error } = await sb.auth.updateUser({ password });
+      if (error) {
+        if (/different from the old/i.test(error.message)) throw new AppError('PASSWORD', 'Yeni şifre eskisiyle aynı olamaz.');
+        if (/weak|pwned|leaked/i.test(error.message)) throw new AppError('PASSWORD', 'Bu şifre çok zayıf ya da sızdırılmış listelerde var. Başka bir şifre seç.');
+        if (/session/i.test(error.message)) throw new AppError('AUTH', 'Linkin süresi dolmuş. Şifre belirleme linkini yeniden iste.');
+        mapAuthError(error);
+      }
+    },
+
+    async deleteAccount(password) {
+      await callFn('hesap-sil', { confirm: 'SİL', password });
+      // Hesap sunucuda silindi; cihazdaki oturumu da temizle.
+      await sb.auth.signOut({ scope: 'local' }).catch(() => {});
     },
 
     async signIn(email, password) {
@@ -217,7 +288,7 @@ export function createSupabaseApi(url: string, key: string): Api {
       if (email.trim().toLowerCase() !== user.email) {
         throw new AppError('EMAIL', 'Kod sadece hesabındaki edu adresine gönderilebilir.');
       }
-      // Mailde hem 6 haneli kod hem de tek dokunuşla yenileme linki olur.
+      // Mailde hem kod hem de tek dokunuşla yenileme linki olur.
       const { error } = await sb.auth.signInWithOtp({
         email: user.email!,
         options: { shouldCreateUser: false, emailRedirectTo: redirectUrl() },
@@ -327,6 +398,7 @@ export function createSupabaseApi(url: string, key: string): Api {
         avatar: null,
         university_short: null,
         venue_name: r.venue_name ?? '—',
+        is_hidden: !!r.is_hidden,
       }));
     },
 
@@ -349,6 +421,191 @@ export function createSupabaseApi(url: string, key: string): Api {
       const { error } = await sb.from('favorites').insert({ user_id: user.id, venue_id: venueId });
       if (error) mapDbError(error);
       return true;
+    },
+
+    async submitApplication(input) {
+      const clean = {
+        venue_name: input.venue_name.trim(),
+        contact_name: input.contact_name.trim(),
+        phone: input.phone.replace(/[^\d+]/g, ''),
+        email: input.email.trim().toLowerCase(),
+        district: input.district?.trim() || null,
+        note: input.note?.trim() || null,
+      };
+      const { error } = await sb.from('venue_applications').insert(clean);
+      if (error) mapDbError(error);
+    },
+
+    // ---------------- Mekan sahibi ----------------
+
+    async myVenues() {
+      const { data, error } = await sb.rpc('my_venues');
+      if (error) mapDbError(error);
+      return ((data ?? []) as any[]).map((v) => ({ ...v, university_id: null })) as OwnerVenue[];
+    },
+
+    async ownerDashboard(venueId) {
+      const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+      const [mine, st, fav, c, r, rv] = await Promise.all([
+        sb.rpc('my_venues'),
+        sb.from('venue_stats').select('*').eq('venue_id', venueId).maybeSingle(),
+        sb.rpc('venue_favorite_count', { p_venue: venueId }),
+        sb.from('campaigns').select(CAMPAIGN_COLS).eq('venue_id', venueId).order('created_at', { ascending: false }).limit(50),
+        sb
+          .from('venue_redemptions')
+          .select('id,campaign_id,campaign_title,created_at,expires_at,used_at')
+          .eq('venue_id', venueId)
+          .gte('created_at', since)
+          .order('created_at', { ascending: false })
+          .limit(500),
+        sb.from('review_feed').select(REVIEW_COLS).eq('venue_id', venueId).order('updated_at', { ascending: false }).limit(30),
+      ]);
+      for (const x of [mine, c, r, rv]) if (x.error) mapDbError(x.error);
+      if (fav.error) mapDbError(fav.error);
+      const venue = ((mine.data ?? []) as any[]).find((v) => v.id === venueId);
+      if (!venue) throw new AppError('FORBIDDEN', 'Bu mekan senin hesabına bağlı değil.');
+      return {
+        venue: { ...venue, university_id: null },
+        stats: normStats(st.data, venueId),
+        favorites: Number(fav.data ?? 0),
+        campaigns: (c.data ?? []) as any,
+        redemptions: (r.data ?? []) as VenueRedemption[],
+        reviews: (rv.data ?? []) as ReviewItem[],
+      };
+    },
+
+    async createCampaign(venueId, input) {
+      const problem = validateCampaign(input);
+      if (problem) throw new AppError('CAMPAIGN', problem);
+      const { error } = await sb.from('campaigns').insert({
+        venue_id: venueId,
+        title: input.title.trim(),
+        discount_text: input.discount_text.trim(),
+        description: input.description?.trim() || null,
+        starts_at: input.starts_at,
+        ends_at: input.ends_at,
+      });
+      if (error) mapDbError(error);
+    },
+
+    async updateCampaign(id, patch) {
+      const { data, error } = await sb.from('campaigns').update(patch).eq('id', id).select('id');
+      if (error) mapDbError(error);
+      if (!data?.length) throw new AppError('FORBIDDEN', 'Kampanya bulunamadı ya da senin mekanına ait değil.');
+    },
+
+    async redeemCode(code) {
+      const clean = normalizeCode(code);
+      if (!clean) return { ok: false, reason: 'FORMAT', campaign_title: null, used_at: null };
+      const { data, error } = await sb.rpc('redeem_code', { p_code: clean });
+      if (error) mapDbError(error);
+      const row = (Array.isArray(data) ? data[0] : data) as RedeemResult | undefined;
+      if (!row) throw new AppError('DB', 'Kod doğrulanamadı.');
+      return row;
+    },
+
+    // ---------------- Admin ----------------
+
+    async adminApplications() {
+      const { data, error } = await sb
+        .from('venue_applications')
+        .select('id,venue_name,contact_name,phone,email,district,note,status,created_at,admin_note,venue_id,decided_at')
+        .order('created_at', { ascending: false })
+        .limit(300);
+      if (error) mapDbError(error);
+      return (data ?? []) as Application[];
+    },
+
+    async adminUpdateApplication(id, patch) {
+      const body: Record<string, unknown> = {};
+      if (patch.status) body.status = patch.status;
+      if (patch.admin_note !== undefined) body.admin_note = patch.admin_note?.trim().slice(0, 500) || null;
+      const { data, error } = await sb.from('venue_applications').update(body).eq('id', id).select('id');
+      if (error) mapDbError(error);
+      if (!data?.length) throw new AppError('FORBIDDEN', 'Başvuru bulunamadı ya da yetkin yok.');
+    },
+
+    async adminApprove(applicationId, venue, owner) {
+      const problem = validateVenue(venue);
+      if (problem) throw new AppError('VENUE', problem);
+      // Şifre linki Supabase'deki "Site URL" adresine döner (admin'in kendi
+      // cihazına değil): sahibin linki hangi cihazda açacağı bilinmez.
+      return callFn<InviteResult>('admin-mekan', {
+        action: 'approve',
+        applicationId,
+        venue,
+        ownerEmail: owner.email,
+        ownerName: owner.name,
+      });
+    },
+
+    async adminVenues() {
+      const { data, error } = await sb.rpc('admin_venues');
+      if (error) mapDbError(error);
+      return ((data ?? []) as any[]).map((v) => ({ ...v, university_id: null })) as AdminVenue[];
+    },
+
+    async adminUpdateVenue(id, patch) {
+      const { data, error } = await sb.from('venues').update(patch).eq('id', id).select('id');
+      if (error) mapDbError(error);
+      if (!data?.length) throw new AppError('FORBIDDEN', 'Mekan bulunamadı ya da yetkin yok.');
+    },
+
+    async adminAssignOwner(venueId, owner) {
+      return callFn<InviteResult>('admin-mekan', {
+        action: 'assignOwner',
+        venueId,
+        ownerEmail: owner.email,
+        ownerName: owner.name,
+      });
+    },
+
+    async adminResendInvite(venueId) {
+      await callFn('admin-mekan', { action: 'resendInvite', venueId });
+    },
+
+    async adminDetachOwner(venueId) {
+      const { error } = await sb.rpc('admin_detach_owner', { p_venue: venueId });
+      if (error) mapDbError(error);
+    },
+
+    async adminReviews(onlyHidden) {
+      const { data, error } = await sb.rpc('admin_reviews', { p_only_hidden: onlyHidden, p_limit: 200 });
+      if (error) mapDbError(error);
+      return (data ?? []) as AdminReview[];
+    },
+
+    async adminSetReviewHidden(id, hidden) {
+      const { error } = await sb.rpc('admin_set_review_hidden', { p_review: id, p_hidden: hidden });
+      if (error) mapDbError(error);
+    },
+
+    async adminCampuses() {
+      const { data, error } = await sb
+        .from('campuses')
+        .select('id,university_id,name,district,lat,lng,is_active')
+        .order('university_id')
+        .order('name');
+      if (error) mapDbError(error);
+      return (data ?? []) as AdminCampus[];
+    },
+
+    async adminSaveCampus(c) {
+      const row = {
+        university_id: c.university_id,
+        name: c.name.trim(),
+        district: c.district?.trim() || null,
+        lat: c.lat,
+        lng: c.lng,
+        is_active: c.is_active,
+      };
+      if (row.name.length < 2) throw new AppError('CAMPUS', 'Kampüs adı en az 2 karakter olmalı.');
+      const q = c.id ? sb.from('campuses').update(row).eq('id', c.id) : sb.from('campuses').insert(row);
+      const { error } = await q;
+      if (error) {
+        if (/duplicate|unique/i.test(error.message)) throw new AppError('CAMPUS', 'Bu üniversitede aynı adla bir kampüs var.');
+        mapDbError(error);
+      }
     },
 
     async createRedemption(campaignId) {

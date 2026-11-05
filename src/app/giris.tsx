@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import { api, AppError, errorMessage } from '@/lib/api';
+import { api, AppError, DEMO_ACCOUNTS, errorMessage, isDemo } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Hero } from '@/components/Brand';
 import { Banner, Box, Button, Field, H2, P, Row, Small } from '@/components/ui';
@@ -20,19 +20,19 @@ export default function Giris() {
   const [error, setError] = useState<string | null>(null);
   const [notConfirmed, setNotConfirmed] = useState(false);
 
-  async function submit() {
+  async function submit(e = email, p = password, target?: string) {
     setError(null);
     clearLinkError();
     setNotConfirmed(false);
-    if (!email.trim() || !password) {
+    if (!e.trim() || !p) {
       setError('E-posta ve şifreni gir.');
       return;
     }
     setBusy(true);
     try {
-      await api.signIn(email, password);
+      await api.signIn(e, p);
       await refreshProfile();
-      router.replace(back as any);
+      router.replace((target ?? back) as any);
     } catch (e) {
       setError(errorMessage(e));
       if (e instanceof AppError && e.code === 'NOT_CONFIRMED') setNotConfirmed(true);
@@ -46,7 +46,9 @@ export default function Giris() {
       <Hero />
       <Box>
         <H2 style={{ marginBottom: 4 }}>Giriş yap</H2>
-        <Small style={{ marginBottom: 14 }}>Okulunun verdiği .edu.tr adresi ve şifrenle.</Small>
+        <Small style={{ marginBottom: 14 }}>
+          Öğrenciysen okulunun verdiği .edu.tr adresiyle; mekan hesabıysan işletme e-postanla.
+        </Small>
 
         {linkError && !error ? <Banner kind="warn" text={linkError} /> : null}
         {error ? (
@@ -81,9 +83,15 @@ export default function Giris() {
           onChangeText={setPassword}
           secureTextEntry
           autoComplete="password"
-          onSubmitEditing={submit}
+          onSubmitEditing={() => submit()}
         />
-        <Button title="GİRİŞ" onPress={submit} loading={busy} />
+        <Button title="GİRİŞ" onPress={() => submit()} loading={busy} />
+        <Link
+          href={email.trim() ? `/sifremi-unuttum?email=${encodeURIComponent(email.trim())}` : '/sifremi-unuttum'}
+          style={{ color: colors.blue, fontWeight: '700', marginTop: 12, alignSelf: 'flex-start' }}
+        >
+          Şifremi unuttum
+        </Link>
       </Box>
 
       <Box bg={colors.orangeSoft} style={{ marginTop: 18 }}>
@@ -101,18 +109,35 @@ export default function Giris() {
       </View>
 
       <View style={{ marginTop: 26, alignItems: 'center', gap: 6 }}>
-        <Small>Tanıtım ekranları (taslak, örnek veri):</Small>
-        <Row style={{ gap: 16 }}>
-          <Link href="/panel" style={{ color: colors.blue, fontWeight: '700' }}>
-            Mekan paneli
-          </Link>
-          <Link href="/admin" style={{ color: colors.blue, fontWeight: '700' }}>
-            Admin paneli
+        <Row style={{ gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <Link href="/mekan-basvuru" style={{ color: colors.blue, fontWeight: '700' }}>
+            Mekan sahibiyim, başvur
           </Link>
           <Link href="/kvkk" style={{ color: colors.blue, fontWeight: '700' }}>
             KVKK metni
           </Link>
         </Row>
+        {isDemo ? (
+          <Banner kind="demo" title="DEMO HESAPLARI (sunum için)">
+            <Small style={{ color: colors.ink, marginBottom: 8 }}>
+              Mekan sahibi: {DEMO_ACCOUNTS.owner.email} · Admin: {DEMO_ACCOUNTS.admin.email} · şifre: {DEMO_ACCOUNTS.owner.password}
+            </Small>
+            <Row style={{ gap: 10, flexWrap: 'wrap' }}>
+              <Button
+                small
+                variant="secondary"
+                title="Mekan sahibi olarak gir"
+                onPress={() => submit(DEMO_ACCOUNTS.owner.email, DEMO_ACCOUNTS.owner.password)}
+              />
+              <Button
+                small
+                variant="secondary"
+                title="Admin olarak gir"
+                onPress={() => submit(DEMO_ACCOUNTS.admin.email, DEMO_ACCOUNTS.admin.password, '/admin')}
+              />
+            </Row>
+          </Banner>
+        ) : null}
       </View>
     </AuthLayout>
   );

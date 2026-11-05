@@ -9,6 +9,6 @@ const key = process.env.EXPO_PUBLIC_SUPABASE_KEY;
 export const api: Api = url && key ? createSupabaseApi(url, key) : demoApi;
 export const isDemo = api.mode === 'demo';
 
-export { demoTools } from './demo';
+export { DEMO_ACCOUNTS, demoTools } from './demo';
 export type { DemoMail } from './demo';
 export { AppError, errorMessage } from './errors';

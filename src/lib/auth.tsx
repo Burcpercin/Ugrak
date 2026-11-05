@@ -29,13 +29,18 @@ function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
  * - guest: giriş yapmamış. Her şeyi görür, kampanya kodu alamaz, puan veremez.
  * - pending: hesap açılmış ama okul e-postası henüz doğrulanmamış.
  * - expired: yıllık doğrulaması dolmuş. Misafir gibi gezer, yenileyince öğrenci olur.
- * - student: doğrulaması geçerli öğrenci.
+ * - student: doğrulaması geçerli öğrenci (admin de öğrencidir).
+ * - owner: mekan sahibi hesabı. Gezebilir, ama öğrenci sayılmaz.
  */
-export type Access = 'guest' | 'pending' | 'expired' | 'student';
+export type Access = 'guest' | 'pending' | 'expired' | 'student' | 'owner';
 
 type AuthState = {
   ready: boolean;
   access: Access;
+  isAdmin: boolean;
+  /** Kişi şifre belirleme linkiyle geldi; şifre ekranına gönderilmeli. */
+  recovery: boolean;
+  clearRecovery: () => void;
   /** Ekranda gösterilecek karakter: öğrencininki ya da misafirin cihazındaki. */
   avatar: AvatarConfig | null;
   guestAvatar: AvatarConfig | null;
@@ -73,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [linkError, setLinkError] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [guestAvatar, setGuestAvatarState] = useState<AvatarConfig | null>(null);
+  const [recovery, setRecovery] = useState(false);
 
   useEffect(() => {
     guestStore.avatar().then(setGuestAvatarState);
@@ -110,7 +116,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (alive) setReady(true);
       }
     })();
-    const off = api.onAuthChange(async (s) => {
+    const off = api.onAuthChange(async (s, event) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true);
+      if (!s) setRecovery(false);
       setSession(s);
       if (s) await refreshProfile();
       else {
@@ -132,7 +140,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const handle = async (link: string | null) => {
       if (!link) return;
       try {
-        await api.handleAuthRedirect(link);
+        const r = await api.handleAuthRedirect(link);
+        if (r === 'recovery') setRecovery(true);
       } catch (e) {
         setLinkError(errorMessage(e));
       }
@@ -147,7 +156,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Şifreyle girdiyse veritabanı reddeder, kişi kodla yenileme ekranını kullanır.
   const triedRefresh = useRef<string | null>(null);
   const expiredId =
-    profile && profile.verified_at && !verificationInfo(profile).verified ? profile.id : null;
+    profile && profile.role !== 'venue_owner' && profile.verified_at && !verificationInfo(profile).verified
+      ? profile.id
+      : null;
   useEffect(() => {
     if (!expiredId || triedRefresh.current === expiredId) return;
     triedRefresh.current = expiredId;
@@ -178,7 +189,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const v = verificationInfo(profile);
     const access: Access = !session
       ? 'guest'
-      : v.verified
+      : profile?.role === 'venue_owner'
+        ? 'owner'
+        : v.verified
         ? 'student'
         : profile?.verified_at
           ? 'expired'
@@ -187,6 +200,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return {
       ready,
       access,
+      isAdmin: profile?.role === 'admin',
+      recovery,
+      clearRecovery: () => setRecovery(false),
       avatar: session ? own : guestAvatar,
       guestAvatar,
       setGuestAvatar,
@@ -200,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearLinkError: () => setLinkError(null),
       profileError,
     };
-  }, [ready, session, profile, refreshProfile, linkError, profileError, guestAvatar, setGuestAvatar]);
+  }, [ready, session, profile, refreshProfile, linkError, profileError, guestAvatar, setGuestAvatar, recovery]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

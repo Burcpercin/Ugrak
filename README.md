@@ -12,7 +12,7 @@
 |---|---|
 | Okul e-postası (.edu.tr) ile kayıt, alan adından üniversite tespiti, sadece İstanbul | ✅ Çalışıyor |
 | Doğrulama maili → linke tıklayınca öğrenci statüsü | ✅ Çalışıyor |
-| Yıllık yeniden doğrulama (okul adresine 6 haneli kod) | ✅ Çalışıyor |
+| Yıllık yeniden doğrulama (okul adresine link + kod) | ✅ Çalışıyor |
 | E-posta + şifre ile giriş | ✅ Çalışıyor |
 | KVKK aydınlatma metni ve kayıtta onay | ✅ Çalışıyor |
 | Basit pixel avatar oluşturucu | ✅ Çalışıyor |
@@ -69,24 +69,54 @@ Ekranlar hangi modda çalıştığını bilmez; ikisi de `src/lib/types.ts` içi
 
 Demo modunda **Profil → Sunum araçları** ile doğrulama tarihi 1 yıl geriye alınabilir; uygulama yıllık doğrulama ekranına geçer. Aynı yerden demo verileri sıfırlanır.
 
+Demo modunda giriş ekranında hazır hesaplar var (şifre `ugrak1234`):
+**Mekan sahibi olarak gir** (`mekan@tepecay.com`, Tepe Çay Ocağı) ve **Admin olarak gir** (`admin@istanbularel.edu.tr`).
+Admin bir başvuruyu onaylayınca sahibine giden "şifreni belirle" maili demo gelen kutusunda görünür.
+
 ## Supabase kurulumu (gerçek mail için, ~10 dk)
 
 1. https://supabase.com → **New project** (bölge: Central EU / Frankfurt).
 2. **SQL Editor → New query** → `supabase/schema.sql` dosyasının tamamını yapıştır → **Run**.
    Tablolar, RLS kuralları, edu kontrol tetikleyicisi, fonksiyonlar ve örnek veri kurulur.
    Ardından `supabase/` içindeki tarihli güncelleme dosyalarını **tarih sırasıyla** aynı şekilde çalıştır
-   (`2026-11-03-arel-alan-adi.sql`, `2026-11-04-faz1-guvenlik-misafir-kampus.sql`). Güncellemeler iki kez
-   çalıştırılsa da sorun çıkarmaz.
+   (`2026-11-03-arel-alan-adi.sql`, `2026-11-04-faz1-guvenlik-misafir-kampus.sql`,
+   `2026-11-05-faz2-paneller.sql`). Güncellemeler iki kez çalıştırılsa da sorun çıkarmaz; ama sırayı bozma
+   (eski bir dosyayı yenisinden sonra tek başına çalıştırırsan sonrakini yeniden çalıştır).
 3. **Authentication → Sign In / Providers → Email**: *Confirm email* açık olmalı.
 4. **Authentication → URL Configuration**: *Site URL* olarak uygulamanın adresini yaz (yerelde `http://localhost:8081`).
+   Mekan sahibine giden "şifreni belirle" linki bu adrese döner. Uygulama internette yayınlanınca Site URL'i o adresle
+   değiştir; yoksa sahip linki kendi cihazında açamaz.
 5. **Authentication → Emails (Templates)**:
    - *Confirm signup* ← `supabase/email-templates/1-kayit-onayi.html`
-   - *Magic Link* ← `supabase/email-templates/2-yillik-dogrulama.html` (yıllık doğrulama: link + 6 haneli kod)
+   - *Magic Link* ← `supabase/email-templates/2-yillik-dogrulama.html` (yıllık doğrulama: link + kod)
+   - *Reset Password* ← `supabase/email-templates/3-sifre-belirle.html` (şifremi unuttum + mekan sahibinin ilk şifresi)
 6. **Project Settings → API**: Project URL ve publishable (anon) key’i kopyala.
 7. Proje klasöründe `.env.example` dosyasını `.env` olarak kopyala, iki değeri yapıştır, `npm run web` ile yeniden başlat.
 8. İsteğe bağlı: Supabase’in ücretsiz mail servisi saatte birkaç mail ile sınırlıdır. Sunumda sorun olmaması için *Authentication → Emails → SMTP* kısmından kendi SMTP’nizi bağlayabilirsiniz (ör. Resend, Brevo).
 
 Admin yapmak için: `update public.profiles set role = 'admin' where email = '...';`
+(Admin, öğrenci hesabıyla kayıt olmuş bir ekip üyesidir. Uygulamadan kimse kendini admin yapamaz.)
+
+### Sunucu fonksiyonları (Edge Functions) — mekan hesabı açma ve hesap silme
+
+Mekan sahibi hesabı açmak ve hesap silmek, uygulamanın kendi anahtarıyla yapılamayan işlerdir; bunları
+Supabase'in sunucusunda çalışan iki küçük fonksiyon yapar. Tam yetkili anahtar sadece orada durur.
+
+1. Supabase → **Edge Functions** → **Deploy a new function** → **Via Editor**.
+2. Adı **`admin-mekan`** → `supabase/functions/admin-mekan/index.ts` dosyasının tamamını yapıştır → **Deploy function**.
+3. Aynısını **`hesap-sil`** adıyla `supabase/functions/hesap-sil/index.ts` için yap.
+4. Ek ayar gerekmez: `SUPABASE_URL` ve anahtarları Supabase fonksiyona kendisi verir.
+
+Kurulmazsa uygulama "Sunucu fonksiyonu kurulmamış" der; diğer her şey çalışır.
+
+### Mekan sahibi akışı
+
+1. Mekan, uygulamadaki **"Mekan sahibiyim, başvur"** formunu doldurur.
+2. Admin, **Admin paneli → Başvurular**'da görüşür, **Onayla + mekanı aç** der; konumu Google Haritalar'dan yapıştırır.
+3. Mekan açılır, sahibin e-postasına **"şifreni belirle"** maili gider (davet 15 dk içinde hesaba dönüşür;
+   davetsiz hiç kimse .edu dışı adresle hesap açamaz).
+4. Sahip linke dokunur, şifresini belirler ve **Mekan paneli**ne düşer: kod doğrulama (telefonda QR), kampanyalar,
+   puanlar, yorumlar.
 
 ## Veritabanı erişim testi
 
@@ -95,8 +125,10 @@ npm run test:db
 ```
 
 Bellekte gerçek bir PostgreSQL açar (internet ve Supabase gerekmez), şemayı ve güncellemeleri kurar,
-sonra misafir, öğrenci, doğrulaması dolmuş öğrenci, mekan sahibi ve admin için 80+ kuralı tek tek dener
-(ör. misafir kod alamaz, öğrenci kendini admin yapamaz, mekan sahibi öğrencinin kimliğini göremez).
+sonra misafir, öğrenci, doğrulaması dolmuş öğrenci, mekan sahibi, admin ve sunucu fonksiyonu için 150 kuralı
+tek tek dener (ör. misafir kod alamaz, öğrenci kendini admin yapamaz, mekan sahibi öğrencinin kimliğini göremez,
+davetsiz .edu dışı adresle hesap açılamaz, 20 hatalı kod denemesinden sonra bekletilir).
+`DETAY=1 npm run test:db` engellenen her işlemin sebebini de gösterir.
 Veritabanında bir yetki değiştirildiğinde bu test yeniden çalıştırılmalı.
 
 ## Klasör yapısı
@@ -107,8 +139,10 @@ src/
     giris.tsx  kayit.tsx  dogrulama.tsx  avatar.tsx  kvkk.tsx
     (tabs)/kesfet.tsx  kampanyalar.tsx  profil.tsx
     mekan/[id].tsx
-    panel/index.tsx       Mekan paneli (taslak)
-    admin/index.tsx       Admin paneli (taslak)
+    panel/index.tsx       Mekan paneli (kod doğrulama, kampanyalar, özet, yorumlar)
+    admin/index.tsx       Admin paneli (başvurular, mekanlar, yorum denetimi, kampüsler)
+    mekan-basvuru.tsx     Mekan başvuru formu (giriş gerekmez)
+    sifremi-unuttum.tsx  sifre.tsx  hesap-sil.tsx
   components/             Ortak bileşenler (UI, Avatar, QR, kampanya kodu, yorum formu)
   lib/
     api/demo.ts           Demo modu veri katmanı
@@ -134,4 +168,11 @@ docs/                     Gereksinim analizi
 - Mekan sahibi kod kullanan öğrencinin kimliğini göremez (`venue_redemptions` görünümü); mekanların sahip bilgisi (`owner_id`) dışarı verilmez.
 - Mekan başvurularında alan uzunluğu sınırı ve basit spam koruması var (aynı telefon/e-posta 24 saatte bir, saatte en çok 30 başvuru).
 - Konum sunucuya gönderilmez; mesafe cihazda hesaplanır. Misafirin favorileri ve karakteri sadece cihazında durur.
+- Mekan sahibi öğrenci sayılmaz: e-postası .edu olsa bile puan veremez, kampanya kodu alamaz.
+- Kod doğrulama: başka mekanın kodu, kullanılmış/süresi dolmuş kod ve durdurulmuş kampanya ayrı ayrı reddedilir;
+  bir mekan hesabı 10 dakikada 20 hatalı denemeden sonra bekletilir (kod tahminine karşı).
+- Kampanyalar silinmez (öğrencilerin kod geçmişi kalır); en fazla 90 gün, aynı anda en fazla 3; başladıktan sonra
+  başlık ve indirim değiştirilemez.
+- Mekanlar silinmez, kapatılır. Mekan sahibini sadece sunucu fonksiyonu atar; admin bile `owner_id`'yi elle değiştiremez.
+- Hesap silme (KVKK): şifre sunucuda tekrar kontrol edilir; mekan ve admin hesapları uygulamadan silinemez.
 - Bilinen kısıt: personel e-postaları da `.edu.tr` olduğundan, öğrenci alt alan adı kullanmayan üniversitelerde personel ayırt edilemez. Bkz. gereksinim analizi, Riskler.

@@ -22,6 +22,19 @@ export function StudentOnly({ what, children }: { what: string; children: React.
 
   if (access === 'student') return <>{children}</>;
 
+  if (access === 'owner') {
+    return (
+      <Box bg={colors.paper} style={{ marginBottom: 12 }}>
+        <H3 style={{ marginBottom: 4 }}>🔒 Mekan hesabıyla yapılamaz</H3>
+        <P style={{ fontSize: 14, marginBottom: 10 }}>
+          {what[0].toLocaleUpperCase('tr') + what.slice(1)} sadece doğrulanmış öğrencilere açık. Mekan hesapları puan veremez
+          ve kampanya kodu alamaz.
+        </P>
+        <Button small variant="secondary" title="Mekan paneline git" onPress={() => router.push('/panel')} style={{ alignSelf: 'flex-start' }} />
+      </Box>
+    );
+  }
+
   if (access === 'expired') {
     return (
       <Box bg={colors.orangeSoft} style={{ marginBottom: 12 }}>
@@ -55,6 +68,21 @@ export function AccessStrip() {
   const router = useRouter();
   const pathname = usePathname();
   if (access === 'student' || access === 'pending') return null;
+  if (access === 'owner') {
+    return (
+      <Box bg={colors.greenSoft} style={{ marginBottom: 16 }} padded={false}>
+        <Row style={{ padding: 12, gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <View style={{ flex: 1, minWidth: 200 }}>
+            <Small style={{ fontFamily: fonts.pixel, color: colors.ink, letterSpacing: 1 }}>MEKAN HESABIYLA GEZİYORSUN</Small>
+            <Small style={{ color: colors.ink, marginTop: 2 }}>
+              Öğrencilerin gördüğü sayfaları görüyorsun. Puan verme ve kod alma kapalı.
+            </Small>
+          </View>
+          <Button small title="PANEL" onPress={() => router.push('/panel')} />
+        </Row>
+      </Box>
+    );
+  }
   const expired = access === 'expired';
   return (
     <Box bg={expired ? colors.orangeSoft : colors.blueSoft} style={{ marginBottom: 16 }} padded={false}>
